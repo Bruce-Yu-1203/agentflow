@@ -1,6 +1,6 @@
 # AgentFlow
 
-AgentFlow is an English customer-support agent runtime with intent fusion, role routing, guarded tools, Redis conversation receipts, Chroma knowledge retrieval, Skills, MCP integration, monitoring, evaluation jobs, and an interactive CLI. A Vue build shell is included; full console features and deployment packaging are planned for later stages.
+AgentFlow is an English customer-support agent runtime with intent fusion, role routing, guarded tools, Redis conversation receipts, Chroma knowledge retrieval, Skills, MCP integration, monitoring, evaluation jobs, an interactive CLI, and a Vue operations console.
 
 ## Run the Python service
 
@@ -19,6 +19,16 @@ set +a
 
 Set `AGENTFLOW_MODEL_API_KEY` and a compatible `AGENTFLOW_MODEL_NAME` before sending live chat requests. The development stack exposes Redis on port 6379 and Chroma on port 8001. `GET /health` checks required storage dependencies; `GET /openapi.json` publishes the API contract. Development permits unauthenticated requests. Production requires a JSON bearer token map in `AGENTFLOW_API_TOKENS`, for example `{"token-value":{"user_id":"user-1","role":"customer"}}`. Administrator tokens are required for knowledge writes and diagnostics.
 
+## Run the web console
+
+```sh
+cd web
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173`. The console includes chat with request inspection, knowledge search/import/upload, Skills status/reload, fixed-suite evaluation, monitoring, and integration diagnostics. The API URL can be changed under Connections. Access tokens remain in browser memory and clear on reload; use an administrator token for operations pages in production. The development API allows the console origins listed in `AGENTFLOW_CORS_ORIGINS`.
+
 ## CLI and verification
 
 ```sh
@@ -36,6 +46,7 @@ Use `/new` to start a new CLI conversation and `/exit` to leave. Set `--token` w
 
 - `services/python/`: FastAPI service, orchestration, persistence, retrieval, MCP, evaluation, monitoring, and CLI.
 - `infra/`: local Redis and Chroma services.
+- `web/`: English operations console and frontend state tests.
 - `config/`: MCP server allowlist configuration.
 - `data/knowledge/`: English demonstration knowledge.
 - `skills/`: English business guidance for support roles.

@@ -7,6 +7,7 @@ import json
 import re
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Response, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 import time
 from uuid import uuid4
 from redis.asyncio import Redis
@@ -59,6 +60,7 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             yield
 
     app = FastAPI(title="AgentFlow API", version=__version__, description="English customer-support agent runtime", lifespan=lifespan)
+    app.add_middleware(CORSMiddleware, allow_origins=[value.strip() for value in settings.cors_origins.split(",") if value.strip()], allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"], allow_credentials=False)
     app.state.settings = settings
     if orchestrator is None and settings.model_api_key:
         model = AnthropicModelClient(settings.model_api_key, settings.model_base_url)

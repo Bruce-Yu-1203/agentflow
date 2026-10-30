@@ -23,6 +23,7 @@ class Settings:
     skills_dir: str = "./skills"
     mcp_config: str = "./config/mcp_servers.json"
     mcp_allowed_hosts: str = "localhost,localhost:*,127.0.0.1,127.0.0.1:*"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     api_tokens: str = ""
     seed_demo_docs: bool = False
 
@@ -47,6 +48,7 @@ class Settings:
             skills_dir=os.getenv("AGENTFLOW_SKILLS_DIR", "./skills").strip(),
             mcp_config=os.getenv("AGENTFLOW_MCP_CONFIG", "./config/mcp_servers.json").strip(),
             mcp_allowed_hosts=os.getenv("AGENTFLOW_MCP_ALLOWED_HOSTS", "localhost,localhost:*,127.0.0.1,127.0.0.1:*").strip(),
+            cors_origins=os.getenv("AGENTFLOW_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").strip(),
             api_tokens=os.getenv("AGENTFLOW_API_TOKENS", "").strip(),
             seed_demo_docs=os.getenv("AGENTFLOW_SEED_DEMO_DOCS", "false").strip().lower() in {"1", "true", "yes"},
         )
@@ -64,6 +66,10 @@ class Settings:
             embedding_url = urlsplit(self.embedding_base_url)
             if embedding_url.scheme not in {"http", "https"} or not embedding_url.hostname:
                 raise ValueError("AGENTFLOW_EMBEDDING_BASE_URL must be an HTTP(S) URL")
+        for origin in [value.strip() for value in self.cors_origins.split(",") if value.strip()]:
+            parsed_origin = urlsplit(origin)
+            if parsed_origin.scheme not in {"http", "https"} or not parsed_origin.hostname or parsed_origin.path not in {"", "/"}:
+                raise ValueError("AGENTFLOW_CORS_ORIGINS must contain HTTP(S) origins")
         parsed = urlsplit(self.redis_url)
         if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
             raise ValueError("AGENTFLOW_REDIS_URL must be a Redis URL")

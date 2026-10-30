@@ -76,6 +76,12 @@ class Stage6Tests(unittest.TestCase):
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json()["status"], "failed")
 
+    def test_console_origin_is_allowed(self):
+        client = TestClient(create_app(Settings(environment="test")))
+        response = client.options("/chat", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["access-control-allow-origin"], "http://localhost:5173")
+
 
 if __name__ == "__main__":
     unittest.main()
