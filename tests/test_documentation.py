@@ -33,6 +33,19 @@ class DocumentationTest(unittest.TestCase):
             with self.subTest(surface=surface):
                 self.assertIn(surface, roadmap)
 
+    def test_implementation_blueprint_covers_each_python_and_web_subsystem(self):
+        technical = (DOCS / "technical-design.md").read_text(encoding="utf-8")
+        blueprint = technical.split("## 12. Concrete Implementation Blueprint", 1)[1]
+        sections = re.findall(r"^### 12\.(\d+) ", blueprint, re.MULTILINE)
+        self.assertEqual(sections, [str(number) for number in range(1, 9)])
+        for term in (
+            "Intent recognition", "Router", "Role tools", "RAG", "Conversation memory",
+            "Skills", "MCP", "Evaluation", "monitoring", "web console",
+            "retry_safe", "client_request_id", "embedding_source",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, blueprint)
+
     def test_relative_document_links_resolve(self):
         for document in DOCS.glob("*.md"):
             content = document.read_text(encoding="utf-8")
