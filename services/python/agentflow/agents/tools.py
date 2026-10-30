@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import inspect
 from typing import Any, Callable
 
 from jsonschema import Draft202012Validator
@@ -83,6 +84,15 @@ class ToolRegistry:
     def definitions(self, role: str) -> list[dict[str, Any]]:
         return [spec.model_definition() for spec in self._specs.values() if role in spec.roles]
 
+    def register_knowledge(self, knowledge: Any) -> None:
+        async def search_knowledge_base(query: str, top_k: int = 5) -> dict[str, Any]:
+            return {"results": await knowledge.search(query, top_k)}
+        self._specs["search_knowledge_base"] = ToolSpec(
+            "search_knowledge_base", "Retrieve approved knowledge passages with provenance.",
+            {"query": STRING, "top_k": {"type": "integer", "minimum": 1, "maximum": 20}}, ("query",),
+            frozenset({"general", "technical", "billing"}), search_knowledge_base,
+        )
+
     def retry_safe(self, name: str) -> bool:
         return self._specs[name].retry_safe
 
@@ -95,4 +105,5 @@ class ToolRegistry:
         errors = list(Draft202012Validator(spec.schema).iter_errors(arguments))
         if errors:
             raise ValueError(f"Invalid tool arguments: {errors[0].message}")
-        return spec.handler(**arguments)
+        output = spec.handler(**arguments)
+        return await output if inspect.isawaitable(output) else output

@@ -23,19 +23,24 @@ from agentflow.api.contracts import (
     ToolTraceResponse,
 )
 from agentflow.config import Settings
-from agentflow.api.auth import resolve_identity
+from agentflow.api.auth import require_admin, resolve_identity
 from agentflow.agents.orchestrator import Orchestrator
 from agentflow.core.embedding import IntentEmbedding
 from agentflow.core.intent import IntentRecognizer
 from agentflow.core.model import AnthropicModelClient
 from agentflow.core.memory import ConversationStore, LeaseLost, ReceiptConflict
+from agentflow.core.knowledge import KnowledgeStore, parse_upload
+from agentflow.core.skills import SkillManager
+from agentflow.core.mcp import MCPManager
+from agentflow.core.retrieval import RetrievalPipeline
+from agentflow.core.mcp_server import build_mcp_server
 
 
 def unavailable() -> None:
     raise HTTPException(status_code=501, detail="This capability is not implemented yet")
 
 
-def create_app(settings: Settings | None = None, orchestrator: Orchestrator | None = None, store: ConversationStore | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, orchestrator: Orchestrator | None = None, store: ConversationStore | None = None, knowledge: KnowledgeStore | None = None, skills_manager: SkillManager | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.validate()
     app = FastAPI(title="AgentFlow API", version=__version__, description="English customer-support agent runtime")
@@ -47,6 +52,40 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
         orchestrator = Orchestrator(recognizer, model, settings.model_name)
     app.state.orchestrator = orchestrator
     app.state.store = store or (ConversationStore(Redis.from_url(settings.redis_url, decode_responses=True)) if settings.environment == "production" else None)
+    app.state.knowledge = knowledge
+    app.state.skills = skills_manager
+    app.state.mcp = None
+    app.state.retrieval = None
+    if orchestrator is not None and skills_manager is not None:
+        orchestrator.skills = skills_manager
+    if orchestrator is not None and knowledge is not None:
+        orchestrator.tools.register_knowledge(knowledge)
+
+    def get_knowledge() -> KnowledgeStore:
+        if app.state.knowledge is None:
+            import chromadb
+            client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port) if settings.environment == "production" else chromadb.PersistentClient(path=settings.chroma_path)
+            app.state.knowledge = KnowledgeStore(client)
+            if app.state.orchestrator is not None:
+                app.state.orchestrator.tools.register_knowledge(app.state.knowledge)
+        return app.state.knowledge
+
+    def get_skills() -> SkillManager:
+        if app.state.skills is None:
+            app.state.skills = SkillManager(settings.skills_dir)
+            if app.state.orchestrator is not None:
+                app.state.orchestrator.skills = app.state.skills
+        return app.state.skills
+
+    def get_mcp() -> MCPManager:
+        if app.state.mcp is None:
+            app.state.mcp = MCPManager(settings.mcp_config)
+        return app.state.mcp
+
+    def get_retrieval() -> RetrievalPipeline:
+        if app.state.retrieval is None:
+            app.state.retrieval = RetrievalPipeline(get_knowledge(), app.state.orchestrator.model if app.state.orchestrator else None, settings.model_name)
+        return app.state.retrieval
 
     @app.get("/health", tags=["System"])
     async def health() -> dict[str, str]:
@@ -105,28 +144,38 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             raise HTTPException(status_code=503, detail="Conversation service is unavailable") from exc
 
     @app.post("/search", response_model=SearchResponse, tags=["Knowledge"])
-    async def search(query: str = Query(min_length=1, max_length=2000), top_k: int = Query(default=5, ge=1, le=20)) -> SearchResponse:
-        unavailable()
+    async def search(query: str = Query(min_length=1, max_length=2000), top_k: int = Query(default=5, ge=1, le=20), authorization: str | None = Header(default=None)) -> SearchResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return SearchResponse(**(await get_retrieval().search(query, top_k)))
 
     @app.post("/knowledge/add", response_model=KnowledgeWriteResponse, tags=["Knowledge"])
-    async def knowledge_add(body: DocumentBatch) -> KnowledgeWriteResponse:
-        unavailable()
+    async def knowledge_add(body: DocumentBatch, authorization: str | None = Header(default=None)) -> KnowledgeWriteResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return KnowledgeWriteResponse(**(await get_knowledge().add([item.model_dump(exclude_none=True) for item in body.documents])))
 
     @app.post("/knowledge/upload", response_model=KnowledgeWriteResponse, tags=["Knowledge"])
-    async def knowledge_upload(file: UploadFile) -> KnowledgeWriteResponse:
-        unavailable()
+    async def knowledge_upload(file: UploadFile, authorization: str | None = Header(default=None)) -> KnowledgeWriteResponse:
+        require_admin(resolve_identity(settings, authorization))
+        try:
+            documents = parse_upload(file.filename or "", await file.read(10 * 1024 * 1024 + 1))
+            return KnowledgeWriteResponse(**(await get_knowledge().add(documents)))
+        except (ValueError, KeyError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/knowledge/stats", response_model=KnowledgeStatsResponse, tags=["Knowledge"])
-    async def knowledge_stats() -> KnowledgeStatsResponse:
-        unavailable()
+    async def knowledge_stats(authorization: str | None = Header(default=None)) -> KnowledgeStatsResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return KnowledgeStatsResponse(total_chunks=await get_knowledge().count())
 
     @app.get("/skills", response_model=SkillsResponse, tags=["Skills"])
-    async def skills() -> SkillsResponse:
-        unavailable()
+    async def skills(authorization: str | None = Header(default=None)) -> SkillsResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return SkillsResponse(**get_skills().list())
 
     @app.post("/skills/reload", response_model=SkillsResponse, tags=["Skills"])
-    async def skills_reload() -> SkillsResponse:
-        unavailable()
+    async def skills_reload(authorization: str | None = Header(default=None)) -> SkillsResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return SkillsResponse(**get_skills().reload())
 
     @app.get("/trace/tool/{request_id}", response_model=ToolTraceResponse, tags=["Operations"])
     async def trace_one(request_id: str) -> ToolTraceResponse:
@@ -161,13 +210,21 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
         unavailable()
 
     @app.get("/integrations/mcp", tags=["Integrations"])
-    async def mcp_info() -> dict:
-        unavailable()
+    async def mcp_info(authorization: str | None = Header(default=None)) -> dict:
+        require_admin(resolve_identity(settings, authorization))
+        return get_mcp().info()
 
     @app.post("/integrations/mcp/call", tags=["Integrations"])
-    async def mcp_call(body: MCPCallRequest) -> dict:
-        unavailable()
+    async def mcp_call(body: MCPCallRequest, authorization: str | None = Header(default=None)) -> dict:
+        require_admin(resolve_identity(settings, authorization))
+        try:
+            return await get_mcp().call("admin", body.tool_name, body.arguments)
+        except PermissionError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    app.mount("/mcp", build_mcp_server(get_knowledge).streamable_http_app())
     return app
 
 

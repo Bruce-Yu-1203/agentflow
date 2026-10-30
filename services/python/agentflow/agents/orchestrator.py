@@ -57,11 +57,12 @@ class OrchestratorResult:
 
 
 class Orchestrator:
-    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None):
+    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None, skills: Any | None = None):
         self.recognizer = recognizer
         self.model = model
         self.model_name = model_name
         self.tools = tools or ToolRegistry()
+        self.skills = skills
 
     def route(self, message: str, intent: IntentResult, unavailable: set[str] | None = None) -> Route:
         if intent.urgency == "critical" or intent.intent_group == "escalation":
@@ -125,9 +126,14 @@ class Orchestrator:
             return RoleResult(role, status="failed", error="Model service is not configured")
         result = RoleResult(role)
         system = ROLE_PROMPTS[role]
+        if self.skills is not None:
+            selected = self.skills.matching(role, message)
+            if selected:
+                system += "\n\nApproved business guidance:\n" + selected
         context = {"message": message, "intent": intent.intent.value, "entities": state["entities"], "history": history[-5:]}
         messages: list[dict[str, Any]] = [{"role": "user", "content": json.dumps(context, ensure_ascii=True)}]
-        definitions = self.tools.definitions(role)
+        business_intent = intent.intent_group in {"query", "billing", "account", "technical", "request", "complaint"}
+        definitions = [definition for definition in self.tools.definitions(role) if business_intent or definition["name"] != "search_knowledge_base"]
         try:
             for _ in range(3):
                 reply = await self.model.complete(stage=f"agent:{role}", model=self.model_name, system=system, messages=messages, tools=definitions, max_tokens=1200, temperature=0.2, timeout=15)
@@ -135,6 +141,10 @@ class Orchestrator:
                     messages.append({"role": "assistant", "content": reply.assistant_content or [{"type": "tool_use", "id": call.id, "name": call.name, "input": call.arguments} for call in reply.tool_calls]})
                     tool_results = []
                     for call in reply.tool_calls:
+                        if call.name == "search_knowledge_base" and not business_intent:
+                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": False, "error": "Knowledge retrieval is not eligible for this intent"})
+                            tool_results.append({"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": "Knowledge retrieval is not eligible for this intent"})
+                            continue
                         if call.name in self.tools._specs and not self.tools.retry_safe(call.name):
                             result.unsafe_attempted = True
                         try:
