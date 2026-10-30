@@ -31,7 +31,7 @@ class StageOneAPITest(unittest.TestCase):
 
     def test_unimplemented_capability_is_explicit(self):
         response = self.client.post("/chat", json={"message": "Hello"})
-        self.assertEqual(response.status_code, 501)
+        self.assertEqual(response.status_code, 503)
 
     def test_invalid_message_rejected_at_contract_boundary(self):
         response = self.client.post("/chat", json={"message": ""})
