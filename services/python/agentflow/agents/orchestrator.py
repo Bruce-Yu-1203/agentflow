@@ -57,12 +57,13 @@ class OrchestratorResult:
 
 
 class Orchestrator:
-    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None, skills: Any | None = None):
+    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None, skills: Any | None = None, operations: Any | None = None):
         self.recognizer = recognizer
         self.model = model
         self.model_name = model_name
         self.tools = tools or ToolRegistry()
         self.skills = skills
+        self.operations = operations
 
     def route(self, message: str, intent: IntentResult, unavailable: set[str] | None = None) -> Route:
         if intent.urgency == "critical" or intent.intent_group == "escalation":
@@ -97,7 +98,7 @@ class Orchestrator:
     async def run(self, message: str, *, history: list[dict[str, str]] | None = None, previous_state: dict[str, Any] | None = None, request_id: str = "") -> OrchestratorResult:
         intent = await self.recognizer.recognize(message, history)
         state = merge_state(previous_state, intent.entities, intent.intent_group, message, request_id)
-        route = self.route(message, intent)
+        route = self.route(message, intent, self.operations.unavailable_roles() if self.operations else None)
         if route.primary == "escalation":
             summary = create_handoff_summary(message, state["entities"])
             text = "I have prepared a summary for a support handoff. No support ticket has been created yet. Summary: " + summary["summary"]

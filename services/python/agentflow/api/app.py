@@ -1,7 +1,7 @@
 """FastAPI application factory and initial API surface."""
 
 import asyncio
-from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, UploadFile
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Response, UploadFile
 import time
 from uuid import uuid4
 from redis.asyncio import Redis
@@ -34,6 +34,8 @@ from agentflow.core.skills import SkillManager
 from agentflow.core.mcp import MCPManager
 from agentflow.core.retrieval import RetrievalPipeline
 from agentflow.core.mcp_server import build_mcp_server
+from agentflow.core.operations import Operations
+from agentflow.core.evaluation import EvaluationQueueFull, EvaluationService
 
 
 def unavailable() -> None:
@@ -51,6 +53,10 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
         recognizer = IntentRecognizer(model, settings.model_name, embedding=embedding, embedding_enabled=settings.embedding_provider != "disabled")
         orchestrator = Orchestrator(recognizer, model, settings.model_name)
     app.state.orchestrator = orchestrator
+    app.state.operations = Operations()
+    app.state.evaluation = EvaluationService(orchestrator.model if orchestrator else None, settings.model_name)
+    if orchestrator is not None:
+        orchestrator.operations = app.state.operations
     app.state.store = store or (ConversationStore(Redis.from_url(settings.redis_url, decode_responses=True)) if settings.environment == "production" else None)
     app.state.knowledge = knowledge
     app.state.skills = skills_manager
@@ -119,6 +125,7 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             intent_embedding_source=result.intent.embedding_source, status=result.status,
             retryable=result.status == "failed", error_code="agent_failed" if result.status == "failed" else None,
             )
+            app.state.operations.record(request_id, response.status, response.latency_ms, response.primary_agent, result.tool_trace)
             return response, result
 
         try:
@@ -178,28 +185,43 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
         return SkillsResponse(**get_skills().reload())
 
     @app.get("/trace/tool/{request_id}", response_model=ToolTraceResponse, tags=["Operations"])
-    async def trace_one(request_id: str) -> ToolTraceResponse:
-        unavailable()
+    async def trace_one(request_id: str, authorization: str | None = Header(default=None)) -> ToolTraceResponse:
+        require_admin(resolve_identity(settings, authorization))
+        trace = app.state.operations.one_trace(request_id)
+        return ToolTraceResponse(request_id=request_id, found=trace is not None, trace=trace)
 
     @app.get("/trace/tools", response_model=RecentToolTracesResponse, tags=["Operations"])
-    async def trace_recent(limit: int = Query(default=20, ge=1, le=200)) -> RecentToolTracesResponse:
-        unavailable()
+    async def trace_recent(limit: int = Query(default=20, ge=1, le=200), authorization: str | None = Header(default=None)) -> RecentToolTracesResponse:
+        require_admin(resolve_identity(settings, authorization))
+        return RecentToolTracesResponse(traces=list(app.state.operations.traces)[:limit])
 
     @app.get("/monitor", tags=["Operations"])
-    async def monitor() -> dict:
-        unavailable()
+    async def monitor(authorization: str | None = Header(default=None)) -> dict:
+        require_admin(resolve_identity(settings, authorization))
+        return app.state.operations.summary()
 
     @app.get("/metrics", tags=["Operations"])
-    async def metrics() -> str:
-        unavailable()
+    async def metrics(authorization: str | None = Header(default=None)) -> Response:
+        require_admin(resolve_identity(settings, authorization))
+        return Response(app.state.operations.metrics(), media_type="text/plain; version=0.0.4")
 
     @app.post("/eval/run", response_model=EvaluationJobResponse, status_code=202, tags=["Evaluation"])
-    async def eval_run(body: EvaluationRequest | None = None) -> EvaluationJobResponse:
-        unavailable()
+    async def eval_run(body: EvaluationRequest | None = None, authorization: str | None = Header(default=None)) -> EvaluationJobResponse:
+        require_admin(resolve_identity(settings, authorization))
+        try:
+            return EvaluationJobResponse(**app.state.evaluation.submit(body.model_dump(exclude_none=True) if body else {}))
+        except EvaluationQueueFull as exc:
+            raise HTTPException(status_code=429, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.get("/eval/jobs/{job_id}", response_model=EvaluationJobResponse, tags=["Evaluation"])
-    async def eval_job(job_id: str) -> EvaluationJobResponse:
-        unavailable()
+    async def eval_job(job_id: str, authorization: str | None = Header(default=None)) -> EvaluationJobResponse:
+        require_admin(resolve_identity(settings, authorization))
+        job = app.state.evaluation.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Evaluation job not found")
+        return EvaluationJobResponse(**job)
 
     @app.get("/integrations/embedding", tags=["Integrations"])
     async def embedding_info() -> dict:
