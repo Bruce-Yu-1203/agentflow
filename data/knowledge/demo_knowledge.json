@@ -1,0 +1,32 @@
+[
+  {
+    "document_id": "demo-refund-policy",
+    "title": "Demo Refund Policy",
+    "content": "This is sample policy content for local development. Customers may request a no-reason refund within seven days of purchase. A submitted refund request is normally reviewed within one to three business days. After approval, the payment provider normally returns the money to the original payment method within five to seven business days. If an item has shipped, the return process must be completed before a refund is processed. The customer pays return shipping unless the item has a quality defect. Between day eight and day thirty, a refund request requires evidence of a product quality issue. Eligibility, review outcome, and settlement timing must be verified against the actual order and payment records; this document does not confirm an individual refund."
+  },
+  {
+    "document_id": "demo-order-status",
+    "title": "Demo Order Status Guide",
+    "content": "This is sample guidance for local development. A customer may check an order using its order ID. Example statuses are pending payment, paid, shipped, in transit, delivered, and completed. Tracking details normally become available within 24 hours after shipment. If an order is marked shipped but has not arrived after seven days, ask for the order ID so support can request a carrier investigation. If a status looks inconsistent, ask for the order ID and do not claim to have checked the live order until an authorized order system returns a result."
+  },
+  {
+    "document_id": "demo-account-security",
+    "title": "Demo Account Security Guide",
+    "content": "This is sample account guidance for local development. Encourage a password of at least eight characters containing letters and numbers, and recommend a unique password and two-step verification where available. A customer who forgot a password may use the verified phone or email recovery flow. If suspicious sign-in activity is reported, ask the customer to secure the account and use the official support channel for identity verification. Never request a password, one-time code, full card number, recovery key, or private token in chat. Do not claim that an account has been locked or that a security notification was sent without an authorized system result."
+  },
+  {
+    "document_id": "demo-technical-troubleshooting",
+    "title": "Demo Technical Troubleshooting",
+    "content": "This is sample troubleshooting guidance for local development. For an application crash, collect the app version, device or browser, time, and steps to reproduce; then suggest a low-risk restart or update when appropriate. HTTP 401 usually indicates an authentication problem, so check sign-in state, token expiry, and the correct environment without exposing credentials. HTTP 403 usually indicates an authorization problem. HTTP 500 indicates that a server could not complete the request; collect the request ID, endpoint, time, and redacted response details before diagnosing a cause. For a slow page, compare network conditions and capture timing. For a failed payment, collect the transaction time and payment channel and route the financial outcome to billing review. Do not invent logs, service health, or a confirmed root cause."
+  },
+  {
+    "document_id": "demo-membership-points",
+    "title": "Demo Membership and Points Policy",
+    "content": "This is sample policy content for local development. An example program awards one point for each CNY 1 spent. One hundred points may be redeemed for CNY 1 on a later purchase. Example tiers are Standard, Silver after CNY 1,000 cumulative spend, and Gold after CNY 5,000 cumulative spend. Example discounts are 5% for Silver and 10% for Gold. Points expire after one year; eligible purchases during the customer's birthday month earn double points. These rules are demonstration data. Confirm the current program rules, account tier, balance, expiry, and purchase eligibility in an authorized system before applying them to a customer."
+  },
+  {
+    "document_id": "demo-delivery-service",
+    "title": "Demo Delivery Service Guide",
+    "content": "This is sample delivery guidance for local development. Standard delivery normally takes three to five business days and has no shipping fee on orders of at least CNY 99. Express delivery normally takes one to two business days and costs CNY 15. Local delivery may arrive the same or next day and costs CNY 10. Remote areas may require another two to three days. The example delivery window is 09:00 to 18:00, with possible holiday delays. Address changes must be requested before shipment. Actual eligibility, fee, tracking status, and arrival estimate depend on the order and carrier; verify those records before making a commitment."
+  }
+]
