@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.env
+.env.*
+!.env.example
+data/chroma/
+data/redis/
+data/eval/baseline.json
+logs/
+dist/
+*.egg-info/
