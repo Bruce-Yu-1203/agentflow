@@ -5,6 +5,7 @@ import json
 import unittest
 
 import fakeredis.aioredis
+import chromadb
 from fastapi.testclient import TestClient
 
 from agentflow.agents.orchestrator import Orchestrator
@@ -12,6 +13,7 @@ from agentflow.api.app import create_app
 from agentflow.config import Settings
 from agentflow.core.intent import IntentRecognizer
 from agentflow.core.memory import ConversationStore, LeaseLost
+from agentflow.core.longterm import LongTermMemory
 from agentflow.core.model import ModelReply
 
 
@@ -22,7 +24,8 @@ class CountingModel:
     async def complete(self, **kwargs):
         if kwargs["stage"] == "intent":
             return ModelReply(text='{"intent":"query","confidence":0.95}')
-        self.agent_calls += 1
+        if kwargs["stage"].startswith("agent:"):
+            self.agent_calls += 1
         return ModelReply(text="Here is the information available.")
 
 
@@ -80,6 +83,52 @@ class Stage3MemoryTests(unittest.TestCase):
                     return ModelReply(text="", truncated=True)
             self.assertFalse(await self.store.compress("user", "conv", "req", BadModel(), "test"))
             self.assertEqual((await self.store.context("user", "conv", "req")).history, messages)
+        asyncio.run(check())
+
+    def test_longterm_vectors_are_user_scoped(self):
+        async def check():
+            client = chromadb.EphemeralClient()
+            for name in ("episodic_memory", "user_profiles"):
+                try:
+                    client.delete_collection(name)
+                except Exception:
+                    pass
+            memory = LongTermMemory(client)
+            await memory.add_episode("alice", "conv-a", "Alice prefers email support")
+            await memory.add_episode("bob", "conv-b", "Bob prefers phone support")
+            self.assertEqual(await memory.relevant("alice", "conv-a", "support"), ["Alice prefers email support"])
+            await memory.update_profile("alice", ["Concise replies"])
+            self.assertEqual(await memory.profile("alice"), "Concise replies")
+            self.assertEqual(await memory.profile("bob"), "")
+        asyncio.run(check())
+
+    def test_compression_keeps_recent_messages(self):
+        async def check():
+            key = self.store.keys("user", "conv", "req")[1]
+            messages = [{"role": "user", "content": f"Message {index}"} for index in range(16)]
+            await self.redis.set(key, json.dumps({"history": messages, "state": {}, "summary": ""}))
+            class SummaryModel:
+                async def complete(self, **kwargs):
+                    return ModelReply(text="A concise English summary")
+            summary = await self.store.compress("user", "conv", "req", SummaryModel(), "test")
+            context = await self.store.context("user", "conv", "req")
+            self.assertEqual(summary, "A concise English summary")
+            self.assertEqual(context.history, messages[-5:])
+        asyncio.run(check())
+
+    def test_concurrent_turns_see_committed_history(self):
+        async def check():
+            async def first():
+                async with await self.store.acquire("user", "shared", "first") as lease:
+                    context = await self.store.context("user", "shared", "first")
+                    await asyncio.sleep(0.02)
+                    await self.store.commit(lease, "user", "shared", "first", "First", {"status": "success", "response": "One"}, context, {}, [])
+            async def second():
+                await asyncio.sleep(0.005)
+                async with await self.store.acquire("user", "shared", "second"):
+                    return await self.store.context("user", "shared", "second")
+            _, context = await asyncio.gather(first(), second())
+            self.assertEqual([item["content"] for item in context.history], ["First", "One"])
         asyncio.run(check())
 
 

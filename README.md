@@ -1,8 +1,8 @@
 # AgentFlow
 
-AgentFlow is an English customer-support agent runtime. The Python service is being built in stages; the Vue console is planned for a later stage. The repository currently includes API contracts, development service configuration, example knowledge, and role Skills.
+AgentFlow is an English customer-support agent runtime with intent fusion, role routing, guarded tools, Redis conversation receipts, Chroma knowledge retrieval, Skills, MCP integration, monitoring, evaluation jobs, and an interactive CLI. A Vue build shell is included; full console features and deployment packaging are planned for later stages.
 
-## Start the Stage 1 API shell
+## Run the Python service
 
 Use Python 3.12 or 3.13 and `uv`:
 
@@ -10,18 +10,36 @@ Use Python 3.12 or 3.13 and `uv`:
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e 'services/python[test]'
 docker compose -f infra/compose.dev.yml up -d
-.venv/bin/uvicorn agentflow.api.app:app --reload --port 8000
+cp .env.example .env
+set -a
+source .env
+set +a
+.venv/bin/uvicorn agentflow.api.app:app --port 8000
 ```
 
-The API health check is `GET http://localhost:8000/health`; its OpenAPI schema is at `GET http://localhost:8000/openapi.json`. Redis uses port 6379 and the development Chroma service uses host port 8001. Copy `.env.example` to `.env` and load it into your shell when configuring model access. Future stages will activate the placeholder endpoints, which currently return HTTP 501.
+Set `AGENTFLOW_MODEL_API_KEY` and a compatible `AGENTFLOW_MODEL_NAME` before sending live chat requests. The development stack exposes Redis on port 6379 and Chroma on port 8001. `GET /health` checks required storage dependencies; `GET /openapi.json` publishes the API contract. Development permits unauthenticated requests. Production requires a JSON bearer token map in `AGENTFLOW_API_TOKENS`, for example `{"token-value":{"user_id":"user-1","role":"customer"}}`. Administrator tokens are required for knowledge writes and diagnostics.
+
+## CLI and verification
+
+```sh
+.venv/bin/agentflow chat --api-url http://localhost:8000
+.venv/bin/python -B -m unittest discover -s tests -q
+docker compose -f infra/compose.dev.yml config --quiet
+cd web && npm ci && npm test && npm run build
+```
+
+With the Compose services running, set `AGENTFLOW_LIVE_SERVICES=1` while running the Python test command to include the Redis and Chroma integration check.
+
+Use `/new` to start a new CLI conversation and `/exit` to leave. Set `--token` when the API uses bearer authentication. The CLI sends requests to the same `/chat` workflow as other clients.
 
 ## Repository contents
 
-- `services/python/`: Python package and API contracts.
-- `infra/`: development service configuration.
-- `data/knowledge/`: English demonstration knowledge documents.
-- `skills/`: English business rules for General, Technical, and Billing roles.
-- `docs/`: requirements, design, and implementation matrix.
-- `tests/`: repository and stage verification.
+- `services/python/`: FastAPI service, orchestration, persistence, retrieval, MCP, evaluation, monitoring, and CLI.
+- `infra/`: local Redis and Chroma services.
+- `config/`: MCP server allowlist configuration.
+- `data/knowledge/`: English demonstration knowledge.
+- `skills/`: English business guidance for support roles.
+- `docs/`: product requirements, technical design, and implementation status.
+- `tests/`: unit, API, and repository checks.
 
-Demonstration policies must be replaced with approved content before production use.
+Demonstration policies require replacement with approved content before production use. See [implementation status](docs/implementation-status.md) for coverage and remaining work.

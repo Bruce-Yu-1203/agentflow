@@ -56,6 +56,14 @@ class DocumentationTest(unittest.TestCase):
                 with self.subTest(document=document.name, target=target):
                     self.assertTrue((document.parent / target).is_file())
 
+    def test_status_records_completed_python_stages_and_remaining_work(self):
+        status = (DOCS / "implementation-status.md").read_text(encoding="utf-8")
+        readme = (DOCS.parent / "README.md").read_text(encoding="utf-8")
+        for stage in range(7):
+            self.assertRegex(status, rf"(?m)^\| {stage} \|")
+        self.assertIn("Remaining validation or scope", status)
+        self.assertIn("docs/implementation-status.md", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

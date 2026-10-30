@@ -1,10 +1,10 @@
 # AgentFlow Technical Design
 
-> Version: 0.3 implementation blueprint | Updated: 2026-10-30 | See [product requirements](requirements.md).
+> Version: 0.4 implementation blueprint | Updated: 2026-10-30 | See [product requirements](requirements.md) and [implementation status](implementation-status.md).
 
 ## 1. Status and Technology Direction
 
-The repository does not yet contain a product implementation. This document describes the target design and development path for a complete English-language product: a Python 3.12/FastAPI service, a Vue/Vite web console, and their local deployment stack. Build the service first, then add the web console against its stable API contract. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
+The repository contains a Python 3.12/FastAPI runtime for the Stage 0–6 API path. This document also records the target design and development path for the remaining capabilities and a Vue/Vite web console. See the implementation status for verified coverage and outstanding work. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
 
 Treat initial weights, timeout values, and evaluation scores as tunable defaults. Make them observable and validate them with a project-specific labeled set and load profile before setting production targets.
 
@@ -136,7 +136,7 @@ Production requires bearer authentication and separate customer and administrato
 
 ## 9. Verification Plan and Requirement Mapping
 
-The following checks are planned for implementation; they are not product tests already present in this repository. Unit tests should cover intent voting, state inheritance, routing, tool permissions, and document chunking. Integration tests should cover Redis receipts and locks, knowledge updates, and MCP allowlists. Contract tests should cover API status codes and frontend response adaptation. End-to-end evaluation should cover multi-turn context, mixed intents, timeouts, retries, and production authentication. Use an independent labeled set to measure model quality.
+The repository includes unit and API contract checks for the implemented Python path. Further integration tests should cover real Redis leases, knowledge updates against the configured Chroma service, external MCP connections, and production authentication. End-to-end evaluation should cover multi-turn context, mixed intents, timeouts, retries, and a labeled set that is independent from development fixtures.
 
 | Requirement | Main component | Key verification |
 | --- | --- | --- |

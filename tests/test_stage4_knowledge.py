@@ -14,6 +14,7 @@ from agentflow.core.knowledge import KnowledgeStore, chunk_text, parse_upload
 from agentflow.core.mcp import MCPManager
 from agentflow.core.skills import SkillManager
 from agentflow.core.retrieval import RetrievalPipeline
+from agentflow.agents.tools import ToolRegistry, ToolSpec
 
 
 class Stage4Tests(unittest.TestCase):
@@ -34,6 +35,15 @@ class Stage4Tests(unittest.TestCase):
             hit = (await self.knowledge.search("refund verification"))[0]
             self.assertEqual(hit["title"], "Updated")
             self.assertEqual(hit["document_id"], "policy-1")
+        asyncio.run(check())
+
+    def test_invalid_batch_does_not_remove_existing_document(self):
+        async def check():
+            await self.knowledge.add([{"document_id": "stable", "title": "Stable", "content": "Keep this policy."}])
+            with self.assertRaises(ValueError):
+                await self.knowledge.add([{"document_id": "stable", "title": "Changed", "content": "Replace it."}, {"title": "Invalid", "content": ""}])
+            hit = (await self.knowledge.search("policy"))[0]
+            self.assertEqual(hit["title"], "Stable")
         asyncio.run(check())
 
     def test_chunk_boundaries_and_upload_validation(self):
@@ -68,6 +78,9 @@ class Stage4Tests(unittest.TestCase):
             path.write_text('[{"name":"one","transport":"streamable_http","url":"https://user:password@example.com/mcp","roles":["admin"]}]')
             with self.assertRaises(ValueError):
                 MCPManager(str(path))
+            path.write_text('[{"name":"one","transport":"streamable_http","url":"https://example.com/mcp","roles":["admin"],"headers_env":{"Authorization":"bad-variable"}}]')
+            with self.assertRaisesRegex(ValueError, "headers_env"):
+                MCPManager(str(path))
 
     def test_retrieval_cache_invalidates_on_write(self):
         async def check():
@@ -80,6 +93,44 @@ class Stage4Tests(unittest.TestCase):
             refreshed = await pipeline.search("refund", 1)
             self.assertFalse(refreshed["cached"])
             self.assertEqual(refreshed["results"][0]["title"], "New policy")
+        asyncio.run(check())
+
+    def test_tool_circuit_and_schema_failures(self):
+        attempts = []
+        def failing() -> dict:
+            attempts.append(1)
+            raise RuntimeError("Unavailable")
+        registry = ToolRegistry([ToolSpec("unstable", "A failing read tool", {}, (), frozenset({"general"}), failing)])
+        async def check():
+            with self.assertRaises(ValueError):
+                await registry.execute("general", "unstable", {"unexpected": True})
+            self.assertEqual(registry._failures.get("unstable", 0), 0)
+            for _ in range(5):
+                with self.assertRaises(RuntimeError):
+                    await registry.execute("general", "unstable", {})
+            self.assertEqual(len(attempts), 5)
+            with self.assertRaisesRegex(RuntimeError, "circuit is open"):
+                await registry.execute("general", "unstable", {})
+            self.assertEqual(len(attempts), 5)
+        asyncio.run(check())
+
+    def test_discovered_mcp_tool_obeys_role_schema(self):
+        class FakeManager:
+            servers = {"docs": object()}
+            async def discover(self):
+                return [{"alias": "mcp__docs__lookup", "remote_alias": "docs.lookup", "description": "Read a document", "schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"], "additionalProperties": False}, "roles": ["technical"]}]
+            async def call(self, role, alias, arguments):
+                return {"role": role, "alias": alias, "id": arguments["id"]}
+        async def check():
+            registry = ToolRegistry()
+            await registry.refresh_mcp(FakeManager())
+            self.assertIn("mcp__docs__lookup", [item["name"] for item in registry.definitions("technical")])
+            with self.assertRaises(PermissionError):
+                await registry.execute("general", "mcp__docs__lookup", {"id": "a"})
+            with self.assertRaises(ValueError):
+                await registry.execute("technical", "mcp__docs__lookup", {"id": "a", "extra": 1})
+            result = await registry.execute("technical", "mcp__docs__lookup", {"id": "a"})
+            self.assertEqual(result["alias"], "docs.lookup")
         asyncio.run(check())
 
 

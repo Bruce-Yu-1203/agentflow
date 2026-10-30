@@ -4,7 +4,7 @@
 
 ## 1. Purpose and Status
 
-This document defines the target scope and acceptance criteria for AgentFlow. The repository currently contains project guidance and documentation checks; it does not yet implement the product capabilities described here. The companion [technical design](technical-design.md) proposes an implementation approach and a staged path to the complete product.
+This document defines the target scope and acceptance criteria for AgentFlow. The repository includes a Python API runtime, CLI, and tests for the Stage 0–6 path; [implementation status](implementation-status.md) distinguishes implemented behavior from remaining work. The companion [technical design](technical-design.md) records the implementation approach and staged path.
 
 The first release focuses on a customer-support workflow: understand a request, route it to the right specialist, use approved tools and knowledge, preserve conversation context, and return a traceable result. Product-specific policies, model providers, identity systems, and business integrations must be selected during implementation.
 

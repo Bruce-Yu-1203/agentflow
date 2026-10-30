@@ -1,6 +1,7 @@
 """Application configuration and startup validation."""
 
 from dataclasses import dataclass
+import json
 import os
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -10,7 +11,7 @@ from urllib.parse import urlsplit
 class Settings:
     environment: str = "development"
     model_api_key: str = ""
-    model_name: str = "claude-3-5-sonnet-20241022"
+    model_name: str = "claude-sonnet-5-5"
     model_base_url: str = ""
     embedding_provider: str = "local"
     embedding_api_key: str = ""
@@ -21,6 +22,7 @@ class Settings:
     chroma_path: str = "./data/chroma"
     skills_dir: str = "./skills"
     mcp_config: str = "./config/mcp_servers.json"
+    mcp_allowed_hosts: str = "localhost,localhost:*,127.0.0.1,127.0.0.1:*"
     api_tokens: str = ""
     seed_demo_docs: bool = False
 
@@ -33,7 +35,7 @@ class Settings:
         settings = cls(
             environment=os.getenv("AGENTFLOW_ENV", "development").strip().lower(),
             model_api_key=os.getenv("AGENTFLOW_MODEL_API_KEY", "").strip(),
-            model_name=os.getenv("AGENTFLOW_MODEL_NAME", "claude-3-5-sonnet-20241022").strip(),
+            model_name=os.getenv("AGENTFLOW_MODEL_NAME", "claude-sonnet-5-5").strip(),
             model_base_url=os.getenv("AGENTFLOW_MODEL_BASE_URL", "").strip(),
             embedding_provider=os.getenv("AGENTFLOW_EMBEDDING_PROVIDER", "local").strip().lower(),
             embedding_api_key=os.getenv("AGENTFLOW_EMBEDDING_API_KEY", "").strip(),
@@ -44,6 +46,7 @@ class Settings:
             chroma_path=os.getenv("AGENTFLOW_CHROMA_PATH", "./data/chroma").strip(),
             skills_dir=os.getenv("AGENTFLOW_SKILLS_DIR", "./skills").strip(),
             mcp_config=os.getenv("AGENTFLOW_MCP_CONFIG", "./config/mcp_servers.json").strip(),
+            mcp_allowed_hosts=os.getenv("AGENTFLOW_MCP_ALLOWED_HOSTS", "localhost,localhost:*,127.0.0.1,127.0.0.1:*").strip(),
             api_tokens=os.getenv("AGENTFLOW_API_TOKENS", "").strip(),
             seed_demo_docs=os.getenv("AGENTFLOW_SEED_DEMO_DOCS", "false").strip().lower() in {"1", "true", "yes"},
         )
@@ -57,6 +60,10 @@ class Settings:
             raise ValueError("AGENTFLOW_MODEL_NAME cannot be empty")
         if self.embedding_provider not in {"local", "online", "auto", "disabled"}:
             raise ValueError("AGENTFLOW_EMBEDDING_PROVIDER must be local, online, auto, or disabled")
+        if self.embedding_base_url:
+            embedding_url = urlsplit(self.embedding_base_url)
+            if embedding_url.scheme not in {"http", "https"} or not embedding_url.hostname:
+                raise ValueError("AGENTFLOW_EMBEDDING_BASE_URL must be an HTTP(S) URL")
         parsed = urlsplit(self.redis_url)
         if parsed.scheme not in {"redis", "rediss"} or not parsed.hostname:
             raise ValueError("AGENTFLOW_REDIS_URL must be a Redis URL")
@@ -67,10 +74,20 @@ class Settings:
             if provider.scheme not in {"http", "https"} or not provider.hostname:
                 raise ValueError("AGENTFLOW_MODEL_BASE_URL must be an HTTP(S) URL")
         if self.environment == "production":
+            if not self.mcp_allowed_hosts:
+                raise ValueError("AGENTFLOW_MCP_ALLOWED_HOSTS is required in production")
             if not self.model_api_key:
                 raise ValueError("AGENTFLOW_MODEL_API_KEY is required in production")
             if not self.api_tokens:
                 raise ValueError("AGENTFLOW_API_TOKENS is required in production")
+            try:
+                tokens = json.loads(self.api_tokens)
+            except json.JSONDecodeError as exc:
+                raise ValueError("AGENTFLOW_API_TOKENS must be a JSON token map") from exc
+            if not isinstance(tokens, dict) or not tokens or any(not isinstance(record, dict) or record.get("role") not in {"customer", "admin"} or not record.get("user_id") for record in tokens.values()):
+                raise ValueError("AGENTFLOW_API_TOKENS must map tokens to user_id and role")
+            if self.embedding_provider == "online" and not self.embedding_api_key:
+                raise ValueError("AGENTFLOW_EMBEDDING_API_KEY is required for online embeddings")
             if self.seed_demo_docs:
                 raise ValueError("Demo knowledge cannot be seeded in production")
             if not Path(self.skills_dir).is_dir():

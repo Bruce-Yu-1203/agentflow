@@ -10,6 +10,8 @@ from agentflow.config import Settings
 from agentflow.core.evaluation import EvaluationService
 from agentflow.core.model import ModelReply
 from agentflow.core.operations import Operations, redact
+from agentflow.core.knowledge import KnowledgeStore
+import chromadb
 
 
 class EvalModel:
@@ -53,6 +55,22 @@ class Stage5Tests(unittest.TestCase):
         self.assertIn("agentflow_chat_total", client.get("/metrics").text)
         self.assertEqual(client.get("/trace/tool/missing").json()["found"], False)
         self.assertEqual(client.post("/eval/run", json={}).status_code, 422)
+
+    def test_rag_metrics_use_labeled_documents(self):
+        async def check():
+            chroma = chromadb.EphemeralClient()
+            try:
+                chroma.delete_collection("knowledge_base")
+            except Exception:
+                pass
+            knowledge = KnowledgeStore(chroma)
+            await knowledge.add([{"document_id": "refund-guide", "title": "Refund guide", "content": "Refund requests need an order ID."}])
+            service = EvaluationService(None, "test", knowledge)
+            report = await service._evaluate({"completed": 0}, {"rag_cases": [{"query": "refund order", "relevant_document_ids": ["refund-guide"], "top_k": 1}]})
+            self.assertEqual(report["rag_recall_at_k"], 1.0)
+            self.assertEqual(report["rag_evidence_precision"], 1.0)
+            self.assertTrue(report["complete"])
+        asyncio.run(check())
 
 
 if __name__ == "__main__":

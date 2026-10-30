@@ -64,6 +64,46 @@ class Stage2Tests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["primary_agent"], "technical")
 
+    def test_low_confidence_request_is_clarified(self):
+        class UncertainModel(FakeModel):
+            async def complete(self, **kwargs):
+                if kwargs["stage"] == "intent":
+                    return ModelReply(text='{"intent":"other","confidence":0.2}')
+                raise AssertionError("A role should not run before clarification")
+        model = UncertainModel()
+        orchestrator = Orchestrator(IntentRecognizer(model, "test", embedding_enabled=False), model, "test")
+        result = asyncio.run(orchestrator.run("Something unusual happened with my service"))
+        self.assertIn("clarify", result.response)
+
+    def test_truncated_answer_is_partial(self):
+        class TruncatedModel(FakeModel):
+            async def complete(self, **kwargs):
+                if kwargs["stage"] == "intent":
+                    return ModelReply(text='{"intent":"query","confidence":0.99}')
+                return ModelReply(text="This is a partial answer", truncated=True)
+        model = TruncatedModel()
+        orchestrator = Orchestrator(IntentRecognizer(model, "test", embedding_enabled=False), model, "test")
+        result = asyncio.run(orchestrator.run("What is the policy?"))
+        self.assertEqual(result.status, "partial")
+
+    def test_disallowed_model_tool_call_is_rejected(self):
+        class BadToolModel(FakeModel):
+            def __init__(self):
+                self.rounds = 0
+            async def complete(self, **kwargs):
+                if kwargs["stage"] == "intent":
+                    return ModelReply(text='{"intent":"technical","confidence":0.99}')
+                self.rounds += 1
+                if self.rounds == 1:
+                    return ModelReply(tool_calls=[ToolCall("bad", "compare_amounts", {"expected": "1", "actual": "2"})])
+                return ModelReply(text="I cannot verify that operation.")
+        model = BadToolModel()
+        orchestrator = Orchestrator(IntentRecognizer(model, "test", embedding_enabled=False), model, "test")
+        result = asyncio.run(orchestrator.run("Technical error"))
+        self.assertFalse(result.tool_trace[0]["success"])
+        self.assertFalse(result.tool_trace[0]["business_success"])
+        self.assertEqual(result.tools_used, [])
+
 
 if __name__ == "__main__":
     unittest.main()

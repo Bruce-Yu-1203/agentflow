@@ -41,21 +41,27 @@ class KnowledgeStore:
         self._cache: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
 
     async def add(self, documents: list[dict[str, str]]) -> dict[str, int]:
-        added = 0
+        prepared = []
         for document in documents:
             title, content = document.get("title", "").strip(), document.get("content", "").strip()
             if not title or not content:
                 raise ValueError("Each document needs a title and content")
             doc_id = (document.get("document_id") or title).strip()
+            if not doc_id:
+                raise ValueError("Document identity cannot be empty")
+            prepared.append((title, content, doc_id))
+        added = 0
+        for title, content, doc_id in prepared:
             version = hashlib.sha256(content.encode()).hexdigest()
             chunks = chunk_text(content)
             existing = await asyncio.to_thread(self.collection.get, where={"document_id": doc_id})
-            ids = existing.get("ids", [])
-            if ids:
-                await asyncio.to_thread(self.collection.delete, ids=ids)
-            chunk_ids = [hashlib.sha256(f"{doc_id}:{index}".encode()).hexdigest() for index in range(len(chunks))]
+            old_ids = existing.get("ids", [])
+            chunk_ids = [hashlib.sha256(f"{doc_id}:{version}:{index}".encode()).hexdigest() for index in range(len(chunks))]
             metadata = [{"document_id": doc_id, "title": title, "version": version, "chunk": index, "total_chunks": len(chunks)} for index in range(len(chunks))]
             await asyncio.to_thread(self.collection.upsert, ids=chunk_ids, documents=chunks, embeddings=[local_vector(chunk, 384) for chunk in chunks], metadatas=metadata)
+            stale = [item for item in old_ids if item not in set(chunk_ids)]
+            if stale:
+                await asyncio.to_thread(self.collection.delete, ids=stale)
             added += len(chunks)
         self.version += 1
         self._cache.clear()

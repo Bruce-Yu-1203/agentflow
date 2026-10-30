@@ -106,9 +106,16 @@ class DialogCase(BaseModel):
     expected_entities: dict[str, list[str]] = Field(default_factory=dict)
 
 
+class RAGCase(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    relevant_document_ids: list[str] = Field(min_length=1)
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
 class EvaluationRequest(BaseModel):
     intent_cases: list[IntentCase] | None = Field(default=None, max_length=200)
     dialog_cases: list[DialogCase] | None = Field(default=None, max_length=100)
+    rag_cases: list[RAGCase] | None = Field(default=None, max_length=100)
 
 
 class EvaluationJobResponse(BaseModel):

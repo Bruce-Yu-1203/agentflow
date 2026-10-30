@@ -57,13 +57,14 @@ class OrchestratorResult:
 
 
 class Orchestrator:
-    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None, skills: Any | None = None, operations: Any | None = None):
+    def __init__(self, recognizer: IntentRecognizer, model: ModelClient | None, model_name: str, *, tools: ToolRegistry | None = None, skills: Any | None = None, operations: Any | None = None, mcp_manager: Any | None = None):
         self.recognizer = recognizer
         self.model = model
         self.model_name = model_name
         self.tools = tools or ToolRegistry()
         self.skills = skills
         self.operations = operations
+        self.mcp_manager = mcp_manager
 
     def route(self, message: str, intent: IntentResult, unavailable: set[str] | None = None) -> Route:
         if intent.urgency == "critical" or intent.intent_group == "escalation":
@@ -95,7 +96,7 @@ class Orchestrator:
             supporting.append("technical")
         return Route(primary, supporting, scores, "Highest eligible role scores")
 
-    async def run(self, message: str, *, history: list[dict[str, str]] | None = None, previous_state: dict[str, Any] | None = None, request_id: str = "") -> OrchestratorResult:
+    async def run(self, message: str, *, history: list[dict[str, str]] | None = None, previous_state: dict[str, Any] | None = None, request_id: str = "", summary: str = "", episodic: list[str] | None = None, profile: str = "") -> OrchestratorResult:
         intent = await self.recognizer.recognize(message, history)
         state = merge_state(previous_state, intent.entities, intent.intent_group, message, request_id)
         route = self.route(message, intent, self.operations.unavailable_roles() if self.operations else None)
@@ -105,11 +106,16 @@ class Orchestrator:
             return OrchestratorResult(text, intent, route, "success", ["create_handoff_summary"], [], state, True)
         if intent.intent_group == "other" and intent.confidence < 0.5 and len(message.split()) > 2:
             return OrchestratorResult("Could you clarify what you need help with and provide any relevant reference or error code?", intent, route, "success", [], [], state)
+        if self.mcp_manager is not None and self.mcp_manager.servers:
+            try:
+                await self.tools.refresh_mcp(self.mcp_manager)
+            except Exception:
+                pass
         roles = [route.primary, *route.supporting]
-        results = await asyncio.gather(*(self._run_role(role, message, intent, state, history or []) for role in roles), return_exceptions=True)
+        results = await asyncio.gather(*(self._run_role(role, message, intent, state, history or [], summary, episodic or [], profile) for role in roles), return_exceptions=True)
         normalized = [value if isinstance(value, RoleResult) else RoleResult(role, status="failed", error=str(value)) for role, value in zip(roles, results)]
         if normalized[0].status == "failed" and route.primary != "general" and not normalized[0].unsafe_attempted:
-            fallback = await self._run_role("general", message, intent, state, history or [])
+            fallback = await self._run_role("general", message, intent, state, history or [], summary, episodic or [], profile)
             normalized.append(fallback)
             if fallback.status != "failed":
                 route.reason += "; specialist failed and General responded"
@@ -122,7 +128,7 @@ class Orchestrator:
         status = "partial" if any(result.status != "success" for result in normalized) else "success"
         return OrchestratorResult(text, intent, route, status, [tool for result in normalized for tool in result.tools_used], [trace for result in normalized for trace in result.tool_trace], state)
 
-    async def _run_role(self, role: str, message: str, intent: IntentResult, state: dict[str, Any], history: list[dict[str, str]]) -> RoleResult:
+    async def _run_role(self, role: str, message: str, intent: IntentResult, state: dict[str, Any], history: list[dict[str, str]], summary: str, episodic: list[str], profile: str) -> RoleResult:
         if self.model is None:
             return RoleResult(role, status="failed", error="Model service is not configured")
         result = RoleResult(role)
@@ -131,19 +137,21 @@ class Orchestrator:
             selected = self.skills.matching(role, message)
             if selected:
                 system += "\n\nApproved business guidance:\n" + selected
-        context = {"message": message, "intent": intent.intent.value, "entities": state["entities"], "history": history[-5:]}
+        context = {"message": message, "intent": intent.intent.value, "entities": state["entities"], "history": history[-5:], "summary": summary, "relevant_memory": episodic[:5], "profile_preferences": profile[:800]}
         messages: list[dict[str, Any]] = [{"role": "user", "content": json.dumps(context, ensure_ascii=True)}]
         business_intent = intent.intent_group in {"query", "billing", "account", "technical", "request", "complaint"}
         definitions = [definition for definition in self.tools.definitions(role) if business_intent or definition["name"] != "search_knowledge_base"]
         try:
             for _ in range(3):
                 reply = await self.model.complete(stage=f"agent:{role}", model=self.model_name, system=system, messages=messages, tools=definitions, max_tokens=1200, temperature=0.2, timeout=15)
+                if reply.truncated and reply.tool_calls:
+                    raise ValueError("Truncated tool-use response")
                 if reply.tool_calls:
                     messages.append({"role": "assistant", "content": reply.assistant_content or [{"type": "tool_use", "id": call.id, "name": call.name, "input": call.arguments} for call in reply.tool_calls]})
                     tool_results = []
                     for call in reply.tool_calls:
                         if call.name == "search_knowledge_base" and not business_intent:
-                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": False, "error": "Knowledge retrieval is not eligible for this intent"})
+                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": False, "business_success": False, "error": "Knowledge retrieval is not eligible for this intent"})
                             tool_results.append({"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": "Knowledge retrieval is not eligible for this intent"})
                             continue
                         if call.name in self.tools._specs and not self.tools.retry_safe(call.name):
@@ -151,10 +159,10 @@ class Orchestrator:
                         try:
                             output = await self.tools.execute(role, call.name, call.arguments)
                             result.tools_used.append(call.name)
-                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": True, "retry_safe": not result.unsafe_attempted})
+                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": True, "business_success": not bool(output.get("isError", False)), "retry_safe": not result.unsafe_attempted})
                             tool_results.append({"type": "tool_result", "tool_use_id": call.id, "content": json.dumps(output)})
                         except Exception as exc:
-                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": False, "error": str(exc)[:160]})
+                            result.tool_trace.append({"tool_name": call.name, "tool_use_id": call.id, "success": False, "business_success": False, "error": str(exc)[:160]})
                             tool_results.append({"type": "tool_result", "tool_use_id": call.id, "is_error": True, "content": str(exc)[:160]})
                     messages.append({"role": "user", "content": tool_results})
                     continue

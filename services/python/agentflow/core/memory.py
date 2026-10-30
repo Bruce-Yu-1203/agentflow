@@ -102,7 +102,7 @@ class ConversationStore:
             lease.lost = True
             raise LeaseLost("Conversation lease was lost before commit")
 
-    async def compress(self, user_id: str, conv_id: str, client_request_id: str, model: Any, model_name: str) -> bool:
+    async def compress(self, user_id: str, conv_id: str, client_request_id: str, model: Any, model_name: str) -> str | bool:
         context_key = self.keys(user_id, conv_id, client_request_id)[1]
         raw = await self.redis.get(context_key)
         if not raw:
@@ -130,7 +130,7 @@ class ConversationStore:
                 pipe.multi()
                 pipe.set(context_key, json.dumps(snapshot), ex=self.ttl)
                 await pipe.execute()
-            return True
+            return summary
         except Exception:
             return False
 

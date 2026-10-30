@@ -1,7 +1,12 @@
 """FastAPI application factory and initial API surface."""
 
 import asyncio
+from contextlib import asynccontextmanager
+import hashlib
+import json
+import re
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Query, Response, UploadFile
+from fastapi.responses import JSONResponse
 import time
 from uuid import uuid4
 from redis.asyncio import Redis
@@ -36,6 +41,7 @@ from agentflow.core.retrieval import RetrievalPipeline
 from agentflow.core.mcp_server import build_mcp_server
 from agentflow.core.operations import Operations
 from agentflow.core.evaluation import EvaluationQueueFull, EvaluationService
+from agentflow.core.longterm import LongTermMemory
 
 
 def unavailable() -> None:
@@ -45,7 +51,14 @@ def unavailable() -> None:
 def create_app(settings: Settings | None = None, orchestrator: Orchestrator | None = None, store: ConversationStore | None = None, knowledge: KnowledgeStore | None = None, skills_manager: SkillManager | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.validate()
-    app = FastAPI(title="AgentFlow API", version=__version__, description="English customer-support agent runtime")
+    local_mcp = None
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        async with local_mcp.session_manager.run():
+            yield
+
+    app = FastAPI(title="AgentFlow API", version=__version__, description="English customer-support agent runtime", lifespan=lifespan)
     app.state.settings = settings
     if orchestrator is None and settings.model_api_key:
         model = AnthropicModelClient(settings.model_api_key, settings.model_base_url)
@@ -57,21 +70,36 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
     app.state.evaluation = EvaluationService(orchestrator.model if orchestrator else None, settings.model_name)
     if orchestrator is not None:
         orchestrator.operations = app.state.operations
-    app.state.store = store or (ConversationStore(Redis.from_url(settings.redis_url, decode_responses=True)) if settings.environment == "production" else None)
+    app.state.store = store or (ConversationStore(Redis.from_url(settings.redis_url, decode_responses=True)) if settings.environment != "test" else None)
     app.state.knowledge = knowledge
+    app.state.evaluation.knowledge = knowledge
     app.state.skills = skills_manager
     app.state.mcp = None
     app.state.retrieval = None
+    app.state.longterm = None
     if orchestrator is not None and skills_manager is not None:
         orchestrator.skills = skills_manager
     if orchestrator is not None and knowledge is not None:
         orchestrator.tools.register_knowledge(knowledge)
 
+    @app.middleware("http")
+    async def protect_mcp(request, call_next):
+        if request.url.path.startswith("/mcp"):
+            try:
+                require_admin(resolve_identity(settings, request.headers.get("authorization")))
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return await call_next(request)
+
     def get_knowledge() -> KnowledgeStore:
         if app.state.knowledge is None:
-            import chromadb
-            client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port) if settings.environment == "production" else chromadb.PersistentClient(path=settings.chroma_path)
-            app.state.knowledge = KnowledgeStore(client)
+            try:
+                import chromadb
+                client = chromadb.HttpClient(host=settings.chroma_host, port=settings.chroma_port) if settings.environment != "test" else chromadb.EphemeralClient()
+                app.state.knowledge = KnowledgeStore(client)
+                app.state.evaluation.knowledge = app.state.knowledge
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="Knowledge service is unavailable") from exc
             if app.state.orchestrator is not None:
                 app.state.orchestrator.tools.register_knowledge(app.state.knowledge)
         return app.state.knowledge
@@ -86,6 +114,8 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
     def get_mcp() -> MCPManager:
         if app.state.mcp is None:
             app.state.mcp = MCPManager(settings.mcp_config)
+            if app.state.orchestrator is not None:
+                app.state.orchestrator.mcp_manager = app.state.mcp
         return app.state.mcp
 
     def get_retrieval() -> RetrievalPipeline:
@@ -93,8 +123,40 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             app.state.retrieval = RetrievalPipeline(get_knowledge(), app.state.orchestrator.model if app.state.orchestrator else None, settings.model_name)
         return app.state.retrieval
 
+    def get_longterm() -> LongTermMemory:
+        if app.state.longterm is None:
+            app.state.longterm = LongTermMemory(get_knowledge().client)
+        return app.state.longterm
+
+    async def maintain_memory(user_id: str, conv_id: str, client_request_id: str, message: str) -> None:
+        if app.state.store is None or app.state.orchestrator is None or app.state.orchestrator.model is None:
+            return
+        try:
+            summary = await app.state.store.compress(user_id, conv_id, client_request_id, app.state.orchestrator.model, settings.model_name)
+            if isinstance(summary, str):
+                await get_longterm().add_episode(user_id, conv_id, summary)
+            explicit = bool(re.search(r"\b(?:i prefer|please remember|my preference is)\b", message, re.I))
+            throttle_key = "agentflow:profile:throttle:" + hashlib.sha256(user_id.encode()).hexdigest()
+            if not explicit and not await app.state.store.redis.set(throttle_key, "1", ex=60, nx=True):
+                return
+            context = await app.state.store.context(user_id, conv_id, client_request_id)
+            reply = await app.state.orchestrator.model.complete(stage="profile", model=settings.model_name, system="Extract only explicitly stated lasting customer preferences. Return JSON with a preferences array of short English strings. Return an empty array if there are none.", messages=[{"role": "user", "content": json.dumps(context.history[-10:])}], max_tokens=200, temperature=0, timeout=10)
+            if not reply.truncated:
+                preferences = json.loads(reply.text).get("preferences", [])
+                if isinstance(preferences, list):
+                    await get_longterm().update_profile(user_id, preferences)
+        except Exception:
+            return
+
     @app.get("/health", tags=["System"])
-    async def health() -> dict[str, str]:
+    async def health() -> dict:
+        if settings.environment == "test":
+            return {"status": "ok", "version": __version__}
+        try:
+            await asyncio.wait_for(app.state.store.redis.ping(), timeout=2)
+            await asyncio.wait_for(asyncio.to_thread(get_knowledge().client.heartbeat), timeout=2)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="Required storage dependency is unavailable") from exc
         return {"status": "ok", "version": __version__}
 
     @app.post("/chat", response_model=ChatResponse, tags=["Chat"])
@@ -110,8 +172,8 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             from hashlib import sha256
             conv_id = sha256(f"{identity.user_id}:{client_request_id}".encode()).hexdigest()[:32]
 
-        async def execute(history=None, previous_state=None) -> tuple[ChatResponse, object]:
-            result = await app.state.orchestrator.run(body.message, history=history, previous_state=previous_state, request_id=request_id)
+        async def execute(history=None, previous_state=None, summary="", episodic=None, profile="") -> tuple[ChatResponse, object]:
+            result = await app.state.orchestrator.run(body.message, history=history, previous_state=previous_state, request_id=request_id, summary=summary, episodic=episodic, profile=profile)
             response = ChatResponse(
             conv_id=conv_id, request_id=request_id, response=result.response,
             intent=result.intent.intent.value, intent_group=result.intent.intent_group,
@@ -128,21 +190,33 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             app.state.operations.record(request_id, response.status, response.latency_ms, response.primary_agent, result.tool_trace)
             return response, result
 
+        def output(response: ChatResponse) -> ChatResponse | Response:
+            if response.status == "failed":
+                return JSONResponse(status_code=503, content=response.model_dump())
+            return response
+
         try:
             async with asyncio.timeout(50):
                 if app.state.store is None:
                     response, _ = await execute()
-                    return response
+                    return output(response)
                 async with await app.state.store.acquire(identity.user_id, conv_id, client_request_id) as lease:
                     previous = await app.state.store.receipt(identity.user_id, conv_id, client_request_id, body.message)
                     if previous and not previous["retryable"]:
-                        return ChatResponse.model_validate(previous["response"])
+                        return output(ChatResponse.model_validate(previous["response"]))
                     context = await app.state.store.context(identity.user_id, conv_id, client_request_id)
-                    response, result = await execute(context.history, context.state)
+                    episodic: list[str] = []
+                    profile = ""
+                    try:
+                        longterm = get_longterm()
+                        episodic, profile = await asyncio.gather(longterm.relevant(identity.user_id, conv_id, body.message), longterm.profile(identity.user_id))
+                    except Exception:
+                        pass
+                    response, result = await execute(context.history, context.state, context.summary, episodic, profile)
                     await app.state.store.commit(lease, identity.user_id, conv_id, client_request_id, body.message, response.model_dump(), context, result.state, result.tool_trace)
                     if response.status != "failed" and app.state.orchestrator.model is not None:
-                        background_tasks.add_task(app.state.store.compress, identity.user_id, conv_id, client_request_id, app.state.orchestrator.model, settings.model_name)
-                    return response
+                        background_tasks.add_task(maintain_memory, identity.user_id, conv_id, client_request_id, body.message)
+                    return output(response)
         except ReceiptConflict as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except asyncio.TimeoutError as exc:
@@ -158,14 +232,20 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
     @app.post("/knowledge/add", response_model=KnowledgeWriteResponse, tags=["Knowledge"])
     async def knowledge_add(body: DocumentBatch, authorization: str | None = Header(default=None)) -> KnowledgeWriteResponse:
         require_admin(resolve_identity(settings, authorization))
-        return KnowledgeWriteResponse(**(await get_knowledge().add([item.model_dump(exclude_none=True) for item in body.documents])))
+        result = await get_knowledge().add([item.model_dump(exclude_none=True) for item in body.documents])
+        if app.state.orchestrator:
+            app.state.orchestrator.tools.invalidate("search_knowledge_base")
+        return KnowledgeWriteResponse(**result)
 
     @app.post("/knowledge/upload", response_model=KnowledgeWriteResponse, tags=["Knowledge"])
     async def knowledge_upload(file: UploadFile, authorization: str | None = Header(default=None)) -> KnowledgeWriteResponse:
         require_admin(resolve_identity(settings, authorization))
         try:
             documents = parse_upload(file.filename or "", await file.read(10 * 1024 * 1024 + 1))
-            return KnowledgeWriteResponse(**(await get_knowledge().add(documents)))
+            result = await get_knowledge().add(documents)
+            if app.state.orchestrator:
+                app.state.orchestrator.tools.invalidate("search_knowledge_base")
+            return KnowledgeWriteResponse(**result)
         except (ValueError, KeyError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -209,6 +289,8 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
     async def eval_run(body: EvaluationRequest | None = None, authorization: str | None = Header(default=None)) -> EvaluationJobResponse:
         require_admin(resolve_identity(settings, authorization))
         try:
+            if body and body.rag_cases:
+                get_knowledge()
             return EvaluationJobResponse(**app.state.evaluation.submit(body.model_dump(exclude_none=True) if body else {}))
         except EvaluationQueueFull as exc:
             raise HTTPException(status_code=429, detail=str(exc)) from exc
@@ -224,17 +306,28 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
         return EvaluationJobResponse(**job)
 
     @app.get("/integrations/embedding", tags=["Integrations"])
-    async def embedding_info() -> dict:
-        unavailable()
+    async def embedding_info(authorization: str | None = Header(default=None)) -> dict:
+        require_admin(resolve_identity(settings, authorization))
+        if app.state.orchestrator is None:
+            return {"configured": False, "source": "unavailable"}
+        return {"configured": True, **app.state.orchestrator.recognizer.embedding.status()}
 
     @app.post("/integrations/embedding/check", tags=["Integrations"])
-    async def embedding_check(body: dict) -> dict:
-        unavailable()
+    async def embedding_check(body: dict, authorization: str | None = Header(default=None)) -> dict:
+        require_admin(resolve_identity(settings, authorization))
+        if app.state.orchestrator is None:
+            raise HTTPException(status_code=503, detail="Model service is not configured")
+        message = body.get("message", "")
+        if not isinstance(message, str) or not message.strip() or len(message) > 2000:
+            raise HTTPException(status_code=422, detail="message must contain 1 to 2000 characters")
+        return await app.state.orchestrator.recognizer.check_embedding(message)
 
     @app.get("/integrations/mcp", tags=["Integrations"])
     async def mcp_info(authorization: str | None = Header(default=None)) -> dict:
         require_admin(resolve_identity(settings, authorization))
-        return get_mcp().info()
+        manager = get_mcp()
+        await manager.discover()
+        return manager.info()
 
     @app.post("/integrations/mcp/call", tags=["Integrations"])
     async def mcp_call(body: MCPCallRequest, authorization: str | None = Header(default=None)) -> dict:
@@ -245,8 +338,16 @@ def create_app(settings: Settings | None = None, orchestrator: Orchestrator | No
             raise HTTPException(status_code=403, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="MCP server is unavailable") from exc
 
-    app.mount("/mcp", build_mcp_server(get_knowledge).streamable_http_app())
+    hosts = [item.strip() for item in settings.mcp_allowed_hosts.split(",") if item.strip()]
+    if settings.environment == "test":
+        hosts.append("testserver")
+    if app.state.orchestrator is not None:
+        app.state.orchestrator.mcp_manager = get_mcp()
+    local_mcp = build_mcp_server(get_knowledge, hosts)
+    app.mount("/mcp", local_mcp.streamable_http_app())
     return app
 
 

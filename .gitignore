@@ -10,4 +10,5 @@ data/redis/
 data/eval/baseline.json
 logs/
 dist/
+node_modules/
 *.egg-info/

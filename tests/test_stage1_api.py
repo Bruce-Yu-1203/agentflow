@@ -42,7 +42,7 @@ class StageOneAPITest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "MODEL_API_KEY"):
             Settings(environment="production").validate()
         with self.assertRaisesRegex(ValueError, "Demo knowledge"):
-            Settings(environment="production", model_api_key="key", api_tokens="token", seed_demo_docs=True).validate()
+            Settings(environment="production", model_api_key="key", api_tokens='{"token":{"user_id":"user","role":"admin"}}', seed_demo_docs=True).validate()
 
 
 if __name__ == "__main__":
