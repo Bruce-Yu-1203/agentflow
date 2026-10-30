@@ -4,7 +4,7 @@
 
 ## 1. Purpose and Status
 
-This document defines the target scope and acceptance criteria for AgentFlow. The repository currently contains project guidance and documentation checks; it does not yet implement the product capabilities described here. The companion [technical design](technical-design.md) proposes an implementation approach.
+This document defines the target scope and acceptance criteria for AgentFlow. The repository currently contains project guidance and documentation checks; it does not yet implement the product capabilities described here. The companion [technical design](technical-design.md) proposes an implementation approach and a staged path to the complete product.
 
 The first release focuses on a customer-support workflow: understand a request, route it to the right specialist, use approved tools and knowledge, preserve conversation context, and return a traceable result. Product-specific policies, model providers, identity systems, and business integrations must be selected during implementation.
 
@@ -49,6 +49,12 @@ Priority: **P0** is required for the initial end-to-end workflow. **P1** follows
 | FR-11 | P1 | Expose health, performance metrics, tool traces, and degraded runtime state. | An execution ID retrieves a redacted trace; monitoring shows recent success rates, latency, and tool failures; repeated specialist failures can reduce routing preference and trigger recovery probes. |
 | FR-12 | P1 | Provide a web console for chat, conversation switching, knowledge import and search, runtime inspection, and evaluation. | Users can complete a chat and inspect role and tool details; responses from an old request cannot overwrite a newly selected backend's state; credentials are not embedded in public build variables. |
 | FR-13 | P1 | Connect approved read-only external tools through MCP and expose local knowledge search to other MCP clients. | Configuration limits servers, tools, roles, and read-only behavior; connection status is visible; external calls receive only the parameters they need. |
+| FR-14 | P1 | Provide both a Python API and a Java API with documented equivalent workflows and explicit backend-specific behavior. | Both services support chat, knowledge, Skills, monitoring, traces, MCP, and fixed-suite evaluation; contract tests identify and cover any deliberate response differences. |
+| FR-15 | P1 | Verify generated answers before delivery when answer verification is enabled. | Only answers accepted for both quality and grounding are delivered as verified; explicit rejection produces a safe handoff; verifier outage returns a retryable failure without persisting an unverified answer. |
+| FR-16 | P1 | Evaluate a customer's saved conversation without rerunning agents or tools. | The evaluator uses the original answer, bounded prior context, and saved evidence; results are scoped to the owner; evaluation does not alter chat history or fixed-suite baselines. |
+| FR-17 | P1 | Bound model input and tool-result size and reject incomplete model outputs. | Old complete turns may be removed to fit the budget, while the active question and tool exchange remain intact; oversized tool results are explicit valid JSON; truncated or filtered model output is not accepted as a complete answer. |
+| FR-18 | P1 | Support semantic and lexical retrieval, with isolated storage for each backend. | Retrieval combines vector and keyword evidence where configured; document replacement removes stale chunks and vectors; one backend cannot silently read or overwrite the other's vector collections. |
+| FR-19 | P1 | Ship an English-language web console, CLI, configuration, examples, and deployment stack for both backends. | All user-facing labels, prompts, errors, sample data, operator logs, API descriptions, documentation, and code comments use English; the complete stack starts through a documented Compose configuration. |
 
 ## 4. Non-Functional Requirements
 
@@ -64,10 +70,10 @@ Priority: **P0** is required for the initial end-to-end workflow. **P1** follows
 ## 5. Delivery Scope
 
 1. **Core workflow (P0):** API, four roles, intent recognition and routing, read-only tools, knowledge retrieval, multi-turn memory, retry safety, and handoff messaging.
-2. **Operations and extensions (P1):** Skills, monitoring and traces, asynchronous evaluations, web console, and MCP.
+2. **Full product (P1):** Skills, monitoring and traces, asynchronous evaluations, MCP, a second backend, answer verification, saved-conversation evaluation, bounded prompts, hybrid retrieval, English-language interfaces, and the web console.
 3. **Business integrations:** Order lookup, payment verification, refund execution, ticket creation, and agent queues require real systems, permissions, and audit support before they can be offered.
 
-A second backend implementation is not required for the first release. The source material does not establish production traffic, an availability SLA, or a labeled quality baseline; define those targets after a representative pilot.
+A second backend implementation is required before the full-product milestone, although the first usable release can run on the Python service. Production traffic, an availability SLA, and a labeled quality baseline have not been established; define those targets after a representative pilot.
 
 ## 6. Decisions Needed Before Production
 

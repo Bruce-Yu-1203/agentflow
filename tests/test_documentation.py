@@ -23,6 +23,15 @@ class DocumentationTest(unittest.TestCase):
         self.assertEqual(len(declared), len(set(declared)))
         self.assertEqual(set(declared), set(mapped))
 
+    def test_full_reproduction_roadmap_has_contiguous_stages_and_all_surfaces(self):
+        technical = (DOCS / "technical-design.md").read_text(encoding="utf-8")
+        stages = [int(value) for value in re.findall(r"^### Stage (\d+) —", technical, re.MULTILINE)]
+        self.assertEqual(stages, list(range(9)))
+        roadmap = technical.split("## 10. Development Roadmap for Complete Reproduction", 1)[1]
+        for surface in ("Python", "Java", "web console", "Compose"):
+            with self.subTest(surface=surface):
+                self.assertIn(surface, roadmap)
+
     def test_relative_document_links_resolve(self):
         for document in DOCS.glob("*.md"):
             content = document.read_text(encoding="utf-8")
