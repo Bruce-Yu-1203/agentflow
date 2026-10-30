@@ -12,6 +12,7 @@ class DocumentationTest(unittest.TestCase):
             content = document.read_text(encoding="utf-8")
             with self.subTest(document=document.name):
                 self.assertNotIn("echomind", content.lower())
+                self.assertNotRegex(content, r"(?i)\bjava\b|spring boot|langchain4j")
                 self.assertNotRegex(content, r"[\u3400-\u9fff]")
 
     def test_requirement_ids_are_unique_and_mapped_to_technical_design(self):
@@ -28,7 +29,7 @@ class DocumentationTest(unittest.TestCase):
         stages = [int(value) for value in re.findall(r"^### Stage (\d+) —", technical, re.MULTILINE)]
         self.assertEqual(stages, list(range(9)))
         roadmap = technical.split("## 10. Development Roadmap for Complete Reproduction", 1)[1]
-        for surface in ("Python", "Java", "web console", "Compose"):
+        for surface in ("Python", "web console", "Compose"):
             with self.subTest(surface=surface):
                 self.assertIn(surface, roadmap)
 

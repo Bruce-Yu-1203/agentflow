@@ -4,7 +4,7 @@
 
 ## 1. Status and Technology Direction
 
-The repository does not yet contain a product implementation. This document describes the target design and development path for a complete English-language product: a Python 3.12/FastAPI service, a Java 21/Spring Boot/LangChain4j service, a Vue/Vite web console, and their local deployment stack. Build the Python service first to establish behavior, then implement the Java service against shared contracts and add the web console. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
+The repository does not yet contain a product implementation. This document describes the target design and development path for a complete English-language product: a Python 3.12/FastAPI service, a Vue/Vite web console, and their local deployment stack. Build the service first, then add the web console against its stable API contract. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
 
 Treat initial weights, timeout values, and evaluation scores as tunable defaults. Make them observable and validate them with a project-specific labeled set and load profile before setting production targets.
 
@@ -14,9 +14,7 @@ Treat initial weights, timeout values, and evaluation scores as tunable defaults
 flowchart TD
     Client[Vue console or API client] --> Gateway[Gateway]
     Gateway --> Python[Python API]
-    Gateway --> Java[Java API]
-    Python --> Chat[Chat workflow contract]
-    Java --> Chat
+    Python --> Chat[Chat workflow]
     Chat --> Guard[Authentication, lock, and receipt]
     Guard --> Context[Context and business state]
     Context --> Intent[Language model, vectors, and rules]
@@ -28,25 +26,24 @@ flowchart TD
     General --> Tools[Tool registry and execution guard]
     Technical --> Tools
     Billing --> Tools
-    Tools --> Knowledge[Backend-specific knowledge retrieval]
+    Tools --> Knowledge[Python knowledge retrieval]
     Tools --> MCP[Approved MCP clients]
     Router --> Commit[Response composition and commit]
     Escalation --> Commit
     Commit --> Redis[(Redis: messages, state, receipts, traces)]
     Commit --> Client
     Commit --> Worker[Background summary and profile jobs]
-    Worker --> VectorDB[(Separate vector collections per backend)]
+    Worker --> VectorDB[(Separate collections for knowledge, memories, and profiles)]
 ```
 
-Keep knowledge documents, episodic memory, and user profiles in separate collections, and isolate the Python and Java collections. The services may share Redis infrastructure but must scope keys and data deliberately. Redis stores recent messages, current summaries, structured state, request receipts, locks, and short-lived traces. Redis and the vector database do not share a transaction; log background persistence failures and provide a recovery path.
+Keep knowledge documents, episodic memory, and user profiles in separate vector collections. Redis stores recent messages, current summaries, structured state, request receipts, locks, and short-lived traces. Redis and the vector database do not share a transaction; log background persistence failures and provide a recovery path.
 
 ## 3. Component Responsibilities
 
 | Component | Responsibility |
 | --- | --- |
-| Python API and access control | Validate requests, resolve bearer identity, protect administrator endpoints, and define response and error contracts. |
-| Java API and model gateway | Implement equivalent HTTP workflows with Spring Boot and LangChain4j; manage input budgets, completion checks, answer verification, and backend-specific storage. |
-| Web console | Adapt both API responses; provide chat, knowledge, Skills, evaluation, connection settings, and request inspection. |
+| API and access control | Validate requests, resolve bearer identity, protect administrator endpoints, and define response and error contracts. |
+| Web console | Provide chat, knowledge, Skills, evaluation, connection settings, and request inspection for the Python API. |
 | Intent recognition | Fuse language-model, vector, and rule signals; return intent, domain, urgency, entities, confidence signals, and vector source. |
 | Agent orchestration | Clarify ambiguous requests, route urgent requests, select primary and supporting roles, execute in parallel, compose answers, and apply fallback behavior. |
 | Role tools | Provide deterministic context inspection, technical diagnostics, billing-field checks, amount comparison, and handoff summaries. |
@@ -126,16 +123,14 @@ These paths form a starting contract. Publish the final schema through OpenAPI b
 | `GET /trace/tool/{request_id}`, `GET /trace/tools` | Inspect a single or recent redacted trace. | P1 |
 | `GET /monitor`, `GET /metrics` | Runtime summary and Prometheus metrics. | P1 |
 | `POST /eval/run`, `GET /eval/jobs/{job_id}` | Submit an asynchronous evaluation and poll its result. | P1 |
-| `POST /eval/conversation` | Evaluate a saved conversation without replaying agents or tools; expose where supported by the selected backend. | P1 |
 | `GET /integrations/embedding`, `POST /integrations/embedding/check` | Inspect the actual intent-vector provider. | P1 |
-| `GET /integrations/semantic` | Inspect semantic storage and retrieval configuration. | P1 |
 | `GET /integrations/mcp`, `POST /integrations/mcp/call`, `/mcp/` | Inspect external MCP connections, debug approved tools, and serve local MCP tools. | P1 |
 
 Distinguish at least these failures: 401 unauthenticated, 403 forbidden, 409 message-ID conflict, 422 invalid request, 503 service or execution failure, 504 chat timeout, and 429 when the evaluation queue is full. Clients must not assume every non-2xx response has the normal chat response shape.
 
 ## 8. Deployment and Security
 
-Deploy both APIs with Redis, a vector database, Prometheus, and a reverse proxy. Serve the web console through a development server locally or as static assets behind the proxy. Give each backend its own application data and vector collections, even when infrastructure is shared. Containers should use service names for Redis and the vector database. Keep model and MCP credentials in server-side environment variables or a secret store; never expose them through public frontend variables.
+Deploy the API with Redis, a vector database, Prometheus, and a reverse proxy. Serve the web console through a development server locally or as static assets behind the proxy. Containers should use service names for Redis and the vector database. Keep model and MCP credentials in server-side environment variables or a secret store; never expose them through public frontend variables.
 
 Production requires bearer authentication and separate customer and administrator roles. Protect knowledge writes, Skills reload, evaluations, trace access, monitoring, and integration diagnostics as administrative operations. Persist Redis, vector database, and monitoring data in explicit volumes; mount Skills, evaluation baselines, and logs separately. Document backup and restore boundaries: in-process jobs and caches do not survive a process restart. Never seed demonstration knowledge in production.
 
@@ -156,26 +151,20 @@ The following checks are planned for implementation; they are not product tests 
 | FR-09 | Skills manager | Matching, reload, and error reporting |
 | FR-10 | Evaluation service | Job progress, scoring errors, and regression checks |
 | FR-11 | Monitoring and traces | Redaction, routing penalties, and recovery |
-| FR-12 | Web console and API client | Backend switching and stale-response isolation |
+| FR-12 | Web console and API client | Conversation state and stale-response isolation |
 | FR-13 | MCP client and server | Allowlist, read-only behavior, and minimal parameters |
-| FR-14 | Python and Java APIs, shared contracts | Equivalent workflows and explicit differences |
-| FR-15 | Answer verifier and chat commit path | Acceptance, rejection, outage, and persistence |
-| FR-16 | Transcript store and conversation evaluator | Owner scope, original evidence, and no replay |
-| FR-17 | Model gateway and prompt budget | Complete-turn trimming and output rejection |
-| FR-18 | Semantic and keyword retrieval | Hybrid recall and isolated vector collections |
-| FR-19 | Web console, CLI, deployment, localization | English output and full-stack startup |
+| FR-14 | Web console, CLI, deployment, localization | English output and full-stack startup |
 
 ## 10. Development Roadmap for Complete Reproduction
 
-The target is feature coverage across two backend implementations, the web console, and deployment. Preserve deliberate backend differences, such as model orchestration and retrieval internals, while documenting a common external contract. Do not mark a stage complete because a demo answer looks plausible: each exit gate needs executable checks and a reviewed English interface.
+The target is feature coverage across the Python backend, web console, and deployment. Do not mark a stage complete because a demo answer looks plausible: each exit gate needs executable checks and a reviewed English interface.
 
 ### Planned repository layout
 
 ```text
 agentflow/
-  contracts/          OpenAPI schemas, shared fixtures, parity cases
+  contracts/          OpenAPI schemas and reusable contract fixtures
   services/python/    FastAPI application and Python tests
-  services/java/      Spring Boot application and Java tests
   web/                Vue application and frontend tests
   infra/              Compose, gateway, monitoring configuration
   docs/               Product, technical, API, and operations guides
@@ -184,17 +173,17 @@ agentflow/
 
 ### Stage 0 — Freeze the behavior and localization inventory
 
-- Inventory every backend endpoint, request and response field, error code, data key, tool, Skill, configuration option, worker, and evaluation mode. Record which backend supports each item and where behavior intentionally differs.
+- Inventory every endpoint, request and response field, error code, data key, tool, Skill, configuration option, worker, and evaluation mode in the Python service, web console, and deployment stack.
 - Inventory all user-visible text and code comments: prompts, role profiles, example knowledge, Skills, evaluation fixtures, API descriptions, validation errors, CLI messages, logs intended for operators, and web labels. Define English terminology for intent names and support workflows.
-- Capture representative contracts and failure cases as fixtures, including mixed-domain routing, repeated messages, expired locks, unsafe tools, retrieval failure, answer-verifier failure, and evaluator errors.
-- **Exit gate:** a reviewed parity matrix covers Python, Java, web, and deployment; every planned capability has an owner, contract, and verification case. This audit must be completed before claiming implementation-level understanding of every branch.
+- Capture representative contracts and failure cases as fixtures, including mixed-domain routing, repeated messages, expired locks, unsafe tools, retrieval failure, model truncation, and evaluator errors.
+- **Exit gate:** a reviewed coverage matrix covers the Python service, web console, and deployment; every planned capability has an owner, contract, and verification case. Complete this audit before claiming implementation-level understanding of every branch.
 
 ### Stage 1 — Build the workspace and shared contracts
 
-- Create the proposed directory layout, Python and Java application shells, Vue shell, development configuration templates, and local Redis/vector database services.
-- Define OpenAPI request and response contracts for chat, knowledge, Skills, traces, evaluation, monitoring, and integrations. Normalize identifiers such as `conv_id`, `client_request_id`, and `request_id` while preserving documented backend-specific fields.
-- Add stable test fixtures, service health checks, configuration validation, and CI jobs for all three applications. Keep secrets out of source control.
-- **Exit gate:** both services start locally, publish their API schemas, and pass schema and configuration checks without requiring a paid model call.
+- Create the proposed directory layout, Python application shell, Vue shell, development configuration templates, and local Redis/vector database services.
+- Define OpenAPI request and response contracts for chat, knowledge, Skills, traces, evaluation, monitoring, and integrations. Normalize identifiers such as `conv_id`, `client_request_id`, and `request_id` as stable public fields.
+- Add stable test fixtures, service health checks, configuration validation, and CI jobs for the API and web console. Keep secrets out of source control.
+- **Exit gate:** the API starts locally, publishes its schema, and passes schema and configuration checks without requiring a paid model call.
 
 ### Stage 2 — Implement Python intent, roles, and model execution
 
@@ -221,29 +210,28 @@ agentflow/
 
 - Implement health, Prometheus metrics, stage timing, redacted request/tool traces, alerting, specialist routing penalties, cooldown, and a single recovery probe.
 - Implement asynchronous fixed-suite intent and conversation evaluation, deterministic assertions, calibrated multi-dimension judging, bounded job queues, progress polling, and suite-compatible regression baselines. Keep evaluation state isolated from live routing state.
-- Define the Python service's full API contract and preserve any intentional differences for the Java implementation. If answer verification or saved-conversation evaluation is required on both services, implement it here against shared fixtures rather than leaving a hidden gap.
 - **Exit gate:** evaluation failures cannot count as valid scores or overwrite a healthy baseline; monitoring recovery cannot be reset by an unrelated request; traces contain no secrets or raw credentials.
 
-### Stage 6 — Implement the Java service and advanced behavior
+### Stage 6 — Complete the Python API, CLI, and operational behavior
 
-- Build the Java 21/Spring Boot API with LangChain4j model services, request-local chat memory, role-specific prompts and tools, strict completion checks, input budgets, and bounded tool-result JSON. Support the chosen model profiles without calling a paid provider during startup.
-- Implement the same chat, authentication, receipt, lease, memory, knowledge, Skills, MCP, monitoring, trace, and fixed-suite evaluation workflows. Use isolated Java vector collections and application data. Add semantic plus keyword retrieval and document replacement consistency.
-- Implement answer verification before delivery, safe handoff on explicit rejection, retryable failure on verifier outage, original-transcript retention, and owner-scoped conversation evaluation that never replays tools or changes fixed-suite baselines.
-- **Exit gate:** Java tests cover tool loops, budget trimming, truncation rejection, answer verification, semantic storage, hybrid retrieval, transcript evaluation, unsafe-write guards, and API parity fixtures. Record deliberate backend differences in the contract matrix.
+- Implement and verify every remaining Python endpoint, including embedding diagnostics, MCP connection status and direct calls, custom evaluation inputs, readiness, trace, and metrics behavior.
+- Complete the interactive Python CLI and ensure its routing, memory, and failure outcomes follow the same core rules as HTTP chat where the flows overlap.
+- Validate environment settings, startup and shutdown behavior, service health checks, and storage fallback rules. Make backend outages visible instead of silently writing to unintended local stores.
+- **Exit gate:** endpoint contract tests cover all documented paths; CLI tests cover new conversations, follow-up messages, and exit; startup validation rejects invalid production configuration.
 
-### Stage 7 — Build the English web console and CLI
+### Stage 7 — Build the English web console
 
-- Implement chat, new conversation, backend selection, connection settings, health status, request inspection, knowledge search/import/upload, Skills status/reload, fixed-suite and saved-conversation evaluation, job polling, and monitoring summaries.
-- Normalize backend response differences in one API client. Keep retry IDs stable for repeated sends; cancel or ignore stale requests after backend or conversation changes. Keep access tokens in session memory, not public environment variables or persistent browser settings.
-- Add English CLI flows for both services, including new conversation and exit commands. Translate all UI labels, accessibility text, placeholders, errors, examples, and help text.
-- **Exit gate:** frontend tests cover backend switching, retry state, evaluation polling, and error shapes; manual flows work against both services using an English-only interface.
+- Implement chat, new conversation, connection settings, health status, request inspection, knowledge search/import/upload, Skills status/reload, fixed-suite evaluation, job polling, and monitoring summaries.
+- Keep retry IDs stable for repeated sends; cancel or ignore stale requests after conversation changes. Keep access tokens in session memory, not public environment variables or persistent browser settings.
+- Translate all UI labels, accessibility text, placeholders, errors, examples, and help text.
+- **Exit gate:** frontend tests cover request state, retry handling, evaluation polling, and error shapes; manual flows work against the API using an English-only interface.
 
 ### Stage 8 — Integrate, audit, and release
 
-- Provide a single documented Compose stack with both APIs, web console, Redis, vector database, Prometheus, and reverse proxy. Also document individual backend startup, environment variables, backup/restore boundaries, and development versus production behavior.
-- Run unit, integration, contract, concurrency, MCP, frontend, and full-stack checks. Exercise new chat, follow-up, retry, mixed-domain routing, knowledge import, tool tracing, fixed-suite evaluation, saved-conversation evaluation, and production authorization.
+- Provide a documented Compose stack with the API, web console, Redis, vector database, Prometheus, and reverse proxy. Also document service startup, environment variables, backup/restore boundaries, and development versus production behavior.
+- Run unit, integration, contract, concurrency, MCP, frontend, and full-stack checks. Exercise new chat, follow-up, retry, mixed-domain routing, knowledge import, tool tracing, fixed-suite evaluation, and production authorization.
 - Scan tracked source and code comments, resources, examples, API descriptions, prompts, Skills, fixtures, operator logs, and web assets for non-English text and legacy branding. Review identifiers and configuration names that must become AgentFlow names; keep protocol-standard names unchanged.
-- **Exit gate:** every requirement in FR-01 through FR-19 has a passing check or an explicitly documented, approved exception; all three applications and the gateway start from a clean checkout; the English-content audit is clean; deployment instructions reproduce the result.
+- **Exit gate:** every requirement in FR-01 through FR-14 has a passing check or an explicitly documented exception; the API, web console, and gateway start from a clean checkout; the English-content audit is clean; deployment instructions reproduce the result.
 
 Each stage should be split into reviewable changes. Follow `AGENTS.md`: update related tests with each implementation change, pass the relevant validation gates, and create a conventional commit for every completed change. Re-run broader suites at integration milestones and before release.
 
