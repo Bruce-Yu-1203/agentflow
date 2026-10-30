@@ -7,6 +7,13 @@ DOCS = Path(__file__).resolve().parents[1] / "docs"
 
 
 class DocumentationTest(unittest.TestCase):
+    def test_product_documents_are_english_and_do_not_name_the_source_project(self):
+        for document in DOCS.glob("*.md"):
+            content = document.read_text(encoding="utf-8")
+            with self.subTest(document=document.name):
+                self.assertNotIn("echomind", content.lower())
+                self.assertNotRegex(content, r"[\u3400-\u9fff]")
+
     def test_requirement_ids_are_unique_and_mapped_to_technical_design(self):
         requirements = (DOCS / "requirements.md").read_text(encoding="utf-8")
         technical = (DOCS / "technical-design.md").read_text(encoding="utf-8")

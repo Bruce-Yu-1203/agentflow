@@ -1,74 +1,74 @@
-# AgentFlow 需求文档
+# AgentFlow Product Requirements
 
-> 版本：0.1（需求草案）｜整理日期：2026-10-30｜依据：本地 EchoMind 资料与 Python、Java、Vue 源码
+> Version: 0.1 draft | Updated: 2026-10-30
 
-## 1. 文档定位
+## 1. Purpose and Status
 
-AgentFlow 当前仓库尚未实现产品功能。本文把 EchoMind 的多 Agent 客服能力提炼为 AgentFlow 的待实现需求；“验收标准”是未来开发的检查依据，不表示当前仓库已经满足。技术方案见 [技术文档](technical-design.md)。
+This document defines the target scope and acceptance criteria for AgentFlow. The repository currently contains project guidance and documentation checks; it does not yet implement the product capabilities described here. The companion [technical design](technical-design.md) proposes an implementation approach.
 
-资料中的 Python 后端功能较完整，且原始说明建议优先参考 Python 版本。因此首期以 Python 服务为实现基线，Web 管理与 Java 对齐能力分阶段安排。具体企业政策、模型账号和真实业务系统需要项目接入时另行确定。
+The first release focuses on a customer-support workflow: understand a request, route it to the right specialist, use approved tools and knowledge, preserve conversation context, and return a traceable result. Product-specific policies, model providers, identity systems, and business integrations must be selected during implementation.
 
-## 2. 产品目标与范围
+## 2. Goals and Users
 
-### 目标
+### Goals
 
-1. 让一条客服消息被识别、路由到合适的处理角色，并生成可追溯的答复。
-2. 让多轮对话延续历史和已收集的业务字段，避免用户重复提供资料。
-3. 让知识、业务规则和外部工具在受控边界内参与回答。
-4. 让客户端重试、同会话并发、模型或工具故障都有明确结果。
-5. 让运营人员能更新资料、观察运行状态、执行效果评测。
+1. Identify a customer's intent and route each request to a suitable role.
+2. Support multi-turn conversations without asking customers to repeat known details.
+3. Ground answers in approved knowledge and constrained tools.
+4. Handle retries, concurrent requests, and model or tool failures with explicit outcomes.
+5. Give operators ways to maintain knowledge and business rules, inspect runtime behavior, and evaluate answer quality.
 
-### 使用者
+### Users
 
-| 角色 | 主要任务 |
+| User | Needs |
 | --- | --- |
-| 客户 | 咨询一般问题、技术故障、账单问题，并持续追问或请求人工帮助。 |
-| 客服运营/管理员 | 维护知识文档与处理规则，查看调用轨迹、监控和评测结果。 |
-| 接入开发者 | 调用聊天 API，接入模型、MCP 服务和未来的业务系统。 |
+| Customer | Ask general, technical, or billing questions; continue a conversation; request human support. |
+| Support operator or administrator | Maintain knowledge and handling rules; inspect traces, monitoring, and evaluations. |
+| Integrator | Call the chat API and connect model providers, external tools, and future business systems. |
 
-### 典型流程
+### Example journey
 
-客户说“登录报 401，刚才付款似乎扣了两次”。系统应识别技术与账单两类诉求，选出主处理角色并让辅助角色协作；两者只使用各自获准的工具，再合成为一条回复。客户下一轮补充订单号时，系统沿用同一会话并合并字段。网络中断后，客户端用同一消息 ID 重试，系统返回已保存的结果而不重复写入历史。
+A customer reports that sign-in returns HTTP 401 and a payment may have been charged twice. The system identifies both technical and billing concerns, selects a primary role and a supporting role, and combines their results into one reply. On the next turn, the customer provides an order number; the system continues the same conversation and carries forward valid fields. If the client loses the response, it retries with the same message ID and receives the saved result without duplicating the conversation entry.
 
-## 3. 功能需求
+## 3. Functional Requirements
 
-优先级：P0 为首期核心闭环，P1 为首期闭环稳定后的扩展。每项验收均基于可观察的 API、状态或记录。
+Priority: **P0** is required for the initial end-to-end workflow. **P1** follows once that workflow is stable. Acceptance criteria describe observable behavior and do not imply that the current repository already implements it.
 
-| 编号 | 优先级 | 需求 | 验收标准 |
+| ID | Priority | Requirement | Acceptance criteria |
 | --- | --- | --- | --- |
-| FR-01 | P0 | 提供对话入口，接受消息、用户、会话和客户端消息 ID；返回回复、会话 ID、执行 ID、处理状态与路由信息。 | 新会话返回可复用的会话 ID；后续携带该 ID 能继续对话；缺失或超长消息被拒绝。 |
-| FR-02 | P0 | 融合 LLM、向量匹配和规则识别细分意图、业务领域、紧急度与实体。 | 响应可看到意图、领域、置信信号和向量来源；在线向量失败时可降级，且不混用不同向量空间。 |
-| FR-03 | P0 | 在 General、Technical、Billing、Escalation 间路由；复合问题允许主辅角色并行处理。 | 单领域选择相应角色；复合问题记录主辅角色和原因；高紧急度或明确人工诉求进入升级路径。 |
-| FR-04 | P0 | 每个角色只获得其职责允许的确定性工具；工具输入必须校验。 | 未授权工具或无效参数不执行；技术排障与账单核验输出明确说明其依据和边界。 |
-| FR-05 | P0 | 支持知识文档导入、更新、统计与按需检索；Agent 自行决定是否检索。 | 相同文档身份重导入不会留下多余旧片段；检索结果能回溯标题、文档身份和版本；检索失败不伪装为政策依据。 |
-| FR-06 | P0 | 保存近期消息、摘要、用户画像和结构化业务字段，并按规则继承或清理字段。 | 追问能使用本会话已知字段；切换订单或业务域时不沿用过期字段；摘要失败不丢失未压缩消息。 |
-| FR-07 | P0 | 对同会话请求加锁并提供消息回执，控制重试和重复执行。 | 同一消息 ID 与相同内容返回原结果；同 ID 不同内容返回冲突；同会话并发按提交顺序读取上下文；失败结果标明能否重试。 |
-| FR-08 | P0 | 人工升级输出可交接的摘要，不虚构已经创建工单或已由坐席接收。 | 回复列出当前诉求与已知信息，并清楚告知用户需要通过实际渠道联系人工。 |
-| FR-09 | P1 | 业务规则以 Skills 文件维护，可按角色和关键词匹配并运行时重载。 | 管理员可查看加载状态、错误和重载结果；规则文本不能扩大工具权限。 |
-| FR-10 | P1 | 支持独立提交意图和多轮对话评测，跟踪进度与报告。 | 评测返回任务 ID；报告区分有效结果与评测错误，包含意图指标、业务断言和对话质量分数；仅在可比条件下评估回归。 |
-| FR-11 | P1 | 提供健康状态、性能指标、工具轨迹和运行降级信息。 | 可按执行 ID 查询脱敏工具轨迹；监控能显示近期成功率、耗时与工具故障；专业角色持续失败时可降权并探测恢复。 |
-| FR-12 | P1 | 提供 Web 调试界面，支持聊天、会话切换、知识导入/检索、运行详情及评测。 | 页面可完成一轮聊天并展示角色与工具信息；后端切换后旧请求不能覆盖新页面状态；凭据不写入公开构建变量。 |
-| FR-13 | P1 | 通过标准 MCP 接入获准的外部只读工具，并将本地知识检索对外提供。 | 配置明确限定服务、工具、角色和只读属性；连接状态可查看；外部调用只发送必要参数。 |
+| FR-01 | P0 | Provide a chat endpoint that accepts a message, user, conversation, and client message ID and returns the answer, conversation ID, execution ID, status, and routing details. | A new conversation returns a reusable ID; a later request continues it; empty or oversized messages are rejected. |
+| FR-02 | P0 | Combine language-model, vector, and rule-based signals to identify intent, domain, urgency, and entities. | The response exposes intent signals and the vector source; vector failures fall back without mixing incompatible vector spaces. |
+| FR-03 | P0 | Route between General, Technical, Billing, and Escalation roles; allow primary and supporting roles to work in parallel on mixed requests. | Single-domain requests choose a suitable role; mixed requests record roles and reasons; urgent requests and explicit handoff requests use the escalation path. |
+| FR-04 | P0 | Give each role only its approved deterministic tools and validate every tool input. | Unauthorized tools and invalid arguments are rejected; technical and billing tools state their evidence and limits. |
+| FR-05 | P0 | Import, update, count, and search knowledge documents; let the agent decide when retrieval is needed. | Reimporting the same document identity replaces obsolete chunks; results retain document identity and version; retrieval failures are never presented as verified policy. |
+| FR-06 | P0 | Preserve recent messages, summaries, user profiles, and structured business fields, with rules for inheritance and clearing stale fields. | Follow-up turns can use valid known fields; switching order or business domain clears stale fields; summary failures do not discard uncompressed messages. |
+| FR-07 | P0 | Serialize requests within a conversation and provide receipts for safe retries. | The same message ID and content return the saved result; reusing an ID with different content returns a conflict; same-conversation requests observe committed order; failures specify retryability. |
+| FR-08 | P0 | Produce a useful human handoff summary without claiming that a ticket was created or an agent accepted the case. | The reply summarizes the request and known details and tells the customer how to reach the actual support channel. |
+| FR-09 | P1 | Store changing business rules as Skills files that can be matched by role or keywords and reloaded at runtime. | Administrators can inspect load status, parsing errors, and reload results; rule text cannot grant tool permissions. |
+| FR-10 | P1 | Run intent and multi-turn conversation evaluations asynchronously and report progress and results. | A job ID is returned; reports separate valid results from evaluation errors and include intent metrics, business assertions, and conversation-quality scores; regression checks compare only compatible suites. |
+| FR-11 | P1 | Expose health, performance metrics, tool traces, and degraded runtime state. | An execution ID retrieves a redacted trace; monitoring shows recent success rates, latency, and tool failures; repeated specialist failures can reduce routing preference and trigger recovery probes. |
+| FR-12 | P1 | Provide a web console for chat, conversation switching, knowledge import and search, runtime inspection, and evaluation. | Users can complete a chat and inspect role and tool details; responses from an old request cannot overwrite a newly selected backend's state; credentials are not embedded in public build variables. |
+| FR-13 | P1 | Connect approved read-only external tools through MCP and expose local knowledge search to other MCP clients. | Configuration limits servers, tools, roles, and read-only behavior; connection status is visible; external calls receive only the parameters they need. |
 
-## 4. 非功能要求与验收口径
+## 4. Non-Functional Requirements
 
-| 维度 | 要求 |
+| Area | Requirement |
 | --- | --- |
-| 安全与权限 | 生产环境必须启用服务端身份校验；普通用户与管理员权限分开。模型密钥、MCP 凭据和用户资料不得进入前端公开变量或未脱敏轨迹。 |
-| 可靠性 | 首期以 EchoMind 的 50 秒聊天总预算、24 小时消息回执作为设计起点；超时、失锁、部分成功和失败都要有明确状态。未来接入写操作时，必须先实现操作前回执、业务幂等键与结果查询。 |
-| 数据隔离 | 会话、回执、画像和检索均按身份隔离；开发示例资料不能自动进入生产知识库。 |
-| 可观察性 | 每轮生成执行 ID；按阶段记录耗时和错误类别；不把“模型调用成功”当作“回答正确”。 |
-| 效果评价 | 在自有标注集上记录意图 Accuracy、Macro-F1 和对话业务断言、Judge 分数；尚无真实基线时不承诺固定准确率。 |
-| 文档容量 | 参考实现限制聊天消息 1–12000 字符、知识上传 10 MB、检索 `top_k` 1–20；首期实现应保持一致或在 API 中明确版本差异。 |
+| Security | Production requires server-side authentication and separate customer and administrator permissions. Model keys, MCP credentials, and personal data must not appear in public frontend variables or unredacted traces. |
+| Reliability | Use a 50-second overall chat budget and 24-hour message receipts as initial design values. Timeouts, lost locks, partial results, and failures must have explicit outcomes. Before adding side-effecting tools, implement pre-operation receipts, downstream idempotency keys, and result lookup. |
+| Data isolation | Scope conversations, receipts, profiles, and retrieval by identity. Demonstration content must never be seeded into production knowledge. |
+| Observability | Assign an execution ID to each turn and record stage latency and error categories. A successful model call does not establish that its answer is correct. |
+| Quality | Measure intent Accuracy and Macro-F1 on a labeled set; evaluate conversations with business assertions and quality scores. Do not promise an accuracy threshold before a representative baseline exists. |
+| Input limits | Initial API limits should be explicit. A useful starting point is 1–12,000 characters per message, 10 MB per knowledge upload, and a retrieval `top_k` between 1 and 20. |
 
-## 5. 阶段划分与边界
+## 5. Delivery Scope
 
-1. **核心闭环（P0）**：Python API、四类角色、意图与路由、只读工具、知识库、多轮记忆、可靠性与升级说明。
-2. **运营与扩展（P1）**：Skills、监控与轨迹、异步评测、Web 界面、标准 MCP。
-3. **后续业务集成**：真实订单查询、退款执行、支付核验、工单创建和坐席队列。只有接入对应业务系统、授权与审计之后才能宣称这些操作完成。
+1. **Core workflow (P0):** API, four roles, intent recognition and routing, read-only tools, knowledge retrieval, multi-turn memory, retry safety, and handoff messaging.
+2. **Operations and extensions (P1):** Skills, monitoring and traces, asynchronous evaluations, web console, and MCP.
+3. **Business integrations:** Order lookup, payment verification, refund execution, ticket creation, and agent queues require real systems, permissions, and audit support before they can be offered.
 
-Java 后端可作为对照实现或后续兼容目标，首期不要求双后端同时交付。来源材料没有提供真实流量、生产 SLA 或经标注验证的准确率，相关目标需在试运行后制定。
+A second backend implementation is not required for the first release. The source material does not establish production traffic, an availability SLA, or a labeled quality baseline; define those targets after a representative pilot.
 
-## 6. 来源与提炼原则
+## 6. Decisions Needed Before Production
 
-本需求依据本地资料中的 `EchoMind/README.md`、`EchoMind/api/main.py`、`EchoMind/agents/agent_orchestrator.py`、`EchoMind/memory/conversation_memory.py`、`EchoMind/tooling/knowledge_base.py`、`EchoMindFrontend/src/App.vue`、`EchoMindJava/README.md`，以及 `详细文档+简历说明/业务流程说明.md`、`EchoMind定位与技术亮点.md`。源目录的 `文档说明.txt` 指出 Python 版更完整，因此以 Python 行为为主，Java 和前端用于补充交互与架构视角。本文为重新组织的需求，不复制来源中的简历包装和未接入的业务能力。
+Select the target industry and knowledge content, model provider, deployment environment, identity provider, data-retention policy, quality targets, and whether real ticketing or payment integrations are required. These choices affect cost, access control, data handling, and acceptance testing.

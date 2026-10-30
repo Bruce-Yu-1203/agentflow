@@ -1,154 +1,157 @@
-# AgentFlow 技术文档
+# AgentFlow Technical Design
 
-> 版本：0.1（技术方案草案）｜整理日期：2026-10-30｜对应 [需求文档](requirements.md)
+> Version: 0.1 proposal | Updated: 2026-10-30 | See [product requirements](requirements.md).
 
-## 1. 状态与技术取舍
+## 1. Status and Technology Direction
 
-AgentFlow 仓库目前只有项目规则与文档测试，下文描述拟建设计。参考实现为 EchoMind 的 Python FastAPI 后端；其 Java 服务用作能力对照，Vue 前端用作交互参考。首期建议以 Python 3.12、FastAPI、Redis、ChromaDB 为主链路，Web 界面在核心 API 稳定后接入。模型调用使用支持 Anthropic Messages 和工具调用的服务，具体提供商、模型及费用由部署环境决定。
+The repository does not yet contain a product implementation. This document describes a proposed design. Start with a Python 3.12 service using FastAPI, Redis, and ChromaDB. Add a web console after the chat API contract is stable. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
 
-设计取舍来自源代码现状，不应直接将源项目的固定权重、超时和模型名视为 AgentFlow 已验证参数。先保留可配置和可观测性，再用自己的标注集与负载数据调优。
+Treat initial weights, timeout values, and evaluation scores as tunable defaults. Make them observable and validate them with a project-specific labeled set and load profile before setting production targets.
 
-## 2. 逻辑架构
+## 2. Logical Architecture
 
 ```mermaid
 flowchart TD
-    Client[Web / API 客户端] --> Gateway[网关与鉴权]
-    Gateway --> Chat[FastAPI /chat]
-    Chat --> Lock[会话锁与回执]
-    Lock --> Memory[上下文与业务状态]
-    Memory --> Intent[LLM + Embedding + Pattern]
-    Intent --> Router[Agent 编排与路由]
-    Router --> General[General]
-    Router --> Technical[Technical]
-    Router --> Billing[Billing]
-    Router --> Escalation[Escalation]
-    General & Technical & Billing --> Tools[工具注册与执行守卫]
-    Tools --> KB[知识检索 / ChromaDB]
-    Tools --> MCP[白名单 MCP 客户端]
-    Router --> Commit[回复合成与原子提交]
+    Client[Web or API client] --> Gateway[Gateway and authentication]
+    Gateway --> Chat[FastAPI chat endpoint]
+    Chat --> Guard[Conversation lock and receipt]
+    Guard --> Context[Context and business state]
+    Context --> Intent[Language model, vectors, and rules]
+    Intent --> Router[Agent orchestration and routing]
+    Router --> General[General role]
+    Router --> Technical[Technical role]
+    Router --> Billing[Billing role]
+    Router --> Escalation[Escalation role]
+    General --> Tools[Tool registry and execution guard]
+    Technical --> Tools
+    Billing --> Tools
+    Tools --> Knowledge[Knowledge retrieval]
+    Tools --> MCP[Approved MCP clients]
+    Router --> Commit[Response composition and commit]
     Escalation --> Commit
-    Commit --> Redis[(Redis: 消息、状态、回执、轨迹)]
+    Commit --> Redis[(Redis: messages, state, receipts, traces)]
     Commit --> Client
-    Commit --> Worker[后台摘要与画像]
-    Worker --> Chroma[(ChromaDB: 情景记忆、画像)]
-    Ops[知识维护 / Skills / 评测 / 监控] --> Chat
+    Commit --> Worker[Background summary and profile jobs]
+    Worker --> VectorDB[(Vector database: episodic memory and profiles)]
 ```
 
-知识库、情景记忆和用户画像在 ChromaDB 使用不同集合。Redis 持有近期消息、当前摘要、结构化状态、请求回执、锁和短期轨迹。两种存储之间没有跨库事务，后台长期记忆失败需记录并允许补偿。
+Keep knowledge documents, episodic memory, and user profiles in separate collections. Redis stores recent messages, current summaries, structured state, request receipts, locks, and short-lived traces. Redis and the vector database do not share a transaction; log background persistence failures and provide a recovery path.
 
-## 3. 核心模块职责
+## 3. Component Responsibilities
 
-| 模块 | 职责 | 参考源码 |
-| --- | --- | --- |
-| API 与访问控制 | 校验请求、Bearer 身份、管理员接口、状态码和响应契约。 | `EchoMind/api/main.py`、`core/access.py` |
-| 意图识别 | LLM、向量、规则融合；输出细分意图、领域、紧急度、实体、来源。 | `core/intent_recognizer.py`、`core/intent_embedding.py` |
-| Agent 编排 | 澄清、升级、主辅路由、并行执行、合成与兜底。 | `agents/agent_orchestrator.py` |
-| 角色工具 | 通用上下文、技术排障、账单字段检查、金额比较、人工交接。 | `agents/tools.py` |
-| 工具守卫与 MCP | 角色白名单、参数 Schema、超时、缓存、熔断、外部工具发现和只读筛选。 | `tooling/tool_manager.py`、`tooling/mcp_client.py`、`tooling/mcp_server.py` |
-| 知识检索 | 导入切片、文档版本、向量检索、改写、去重与重排。 | `tooling/knowledge_base.py`、`tooling/tool_manager.py` |
-| 会话记忆 | 近期消息、摘要、画像、字段继承、会话锁、回执和原子提交。 | `memory/conversation_memory.py`、`core/conversation_state.py` |
-| 运营能力 | Skills 热加载、监控指标、脱敏轨迹、异步评测和回归基线。 | `core/skill_loader.py`、`monitor/`、`evaluation/` |
+| Component | Responsibility |
+| --- | --- |
+| API and access control | Validate requests, resolve bearer identity, protect administrator endpoints, and define response and error contracts. |
+| Intent recognition | Fuse language-model, vector, and rule signals; return intent, domain, urgency, entities, confidence signals, and vector source. |
+| Agent orchestration | Clarify ambiguous requests, route urgent requests, select primary and supporting roles, execute in parallel, compose answers, and apply fallback behavior. |
+| Role tools | Provide deterministic context inspection, technical diagnostics, billing-field checks, amount comparison, and handoff summaries. |
+| Tool guard and MCP | Enforce role allowlists and schemas; apply timeout, cache, and circuit-breaker policies; discover and filter external tools. |
+| Knowledge retrieval | Import and chunk documents, track versions, retrieve passages, and optionally rewrite, deduplicate, and rerank queries. |
+| Conversation memory | Maintain recent messages, summaries, profiles, inherited fields, locks, receipts, and atomic turn commits. |
+| Operations | Reload Skills, publish metrics, store redacted traces, and run asynchronous evaluations with compatible regression baselines. |
 
-## 4. 一轮对话的数据流
+## 4. Chat Turn Lifecycle
 
-1. 客户端提交 `POST /chat`，传入 `message`、可选 `conv_id`，以及用于安全重试的 `client_request_id`。认证后用户身份以 Token 映射为准。
-2. 服务取得同会话锁并检查回执。同 ID、不同消息返回冲突；已完成回执直接返回；可重试失败才重新处理。
-3. 读取近期消息、摘要、相关情景记忆、画像与结构化业务字段。意图识别使用当前消息和有限历史；业务字段按新旧实体及领域切换规则合并。
-4. 路由先处理紧急升级和人工诉求，再决定单角色或主辅协作。需澄清时直接问缺失信息。普通角色根据职责调用获准工具，RAG 仅在 Agent 需要资料时触发。
-5. 多角色成功结果合成为一条回复；部分角色失败可返回 `partial`，全部失败返回 `failed`。工具轨迹记录执行成功与业务结果成功，两者分别判断。
-6. Redis 中原子保存响应回执和可用轨迹；非失败轮次同时保存用户消息、助手消息和业务状态。返回后才提交后台摘要和画像任务。
+1. The client sends `POST /chat` with `message`, optional `conv_id`, and a stable `client_request_id` for safe retries. After authentication, the token identity overrides any user ID supplied in the body.
+2. Acquire the conversation lock and check the receipt. Reusing an ID with different content returns a conflict. Return completed receipts directly; retry only failures explicitly marked retryable.
+3. Read recent messages, summaries, relevant episodic memories, profile data, and structured business fields. Recognize intent using the current message and bounded history, then merge fields under rules for changed orders and domains.
+4. Route urgent or explicit handoff requests first. Otherwise select one role or a primary and supporting roles. Ask for missing information when clarification is needed. A role may request knowledge or another approved tool only when needed.
+5. Compose successful role results into one reply. Return `partial` when some roles fail but useful output remains; return `failed` when all roles fail. Record both execution status and business-result status for each tool call.
+6. Atomically save the receipt and available trace in Redis. Save user and assistant messages plus business state for non-failed turns. Enqueue summary and profile maintenance after the response path.
 
-参考实现给整轮 HTTP 聊天 50 秒预算，包含锁等待、上下文、模型、工具和提交。内层超时仍受总预算约束。客户端超时后复用原 `client_request_id`；新消息必须使用新 ID。
+Use an initial 50-second overall HTTP chat budget including lock wait, context loading, model calls, tools, and commit. Inner timeouts remain bounded by the overall budget. A client retry after timeout reuses the original `client_request_id`; a new message uses a new ID.
 
-### 请求与响应示例
+### Request example
 
 ```json
 {
-  "message": "登录提示 401，而且订单可能重复扣款",
-  "user_id": "demo_user",
+  "message": "Sign-in returns 401 and I may have been charged twice",
+  "user_id": "demo-user",
   "conv_id": "demo-conversation",
   "client_request_id": "turn-001"
 }
 ```
 
-响应至少包含 `conv_id`、`request_id`、`response`、`intent`、`intent_group`、`entities`、`primary_agent`、`supporting_agents`、`tools_used`、`status`、`retryable`、`error_code` 和 `latency_ms`。`request_id` 查询轨迹，`client_request_id` 识别逻辑消息，二者用途不同。`status` 取 `success`、`partial`、`failed`；失败的 HTTP 状态与业务错误码需同时保留。不要把 `escalated=true` 解释为真实坐席已经接单。
+The response should include `conv_id`, `request_id`, `response`, `intent`, `intent_group`, `entities`, `primary_agent`, `supporting_agents`, `tools_used`, `status`, `retryable`, `error_code`, and `latency_ms`. `request_id` identifies an execution for trace lookup; `client_request_id` identifies a logical message for retry. They are not interchangeable. `status` is `success`, `partial`, or `failed`. Preserve HTTP status and application error code together. An escalation flag must not imply that a real support agent accepted the case.
 
-## 5. 意图、路由与工具策略
+## 5. Intent, Routing, and Tool Policy
 
-### 意图与向量
+### Intent and vectors
 
-EchoMind 的起始融合权重为 LLM 0.7、向量 0.2、规则 0.1；先聚合业务领域，再选领域内细分意图。AgentFlow 可从此起步，但须在标注集上验证。向量分支可选择在线 `BAAI/bge-m3`，失败时问题与模板一起退回本地 n-gram；知识库向量与意图向量是两套用途，不共用模型空间。
+Start with configurable fusion weights such as 0.7 for language-model classification, 0.2 for vector matching, and 0.1 for rules. Aggregate domain scores before selecting a fine-grained intent within the domain. Validate the weights on labeled data before treating them as effective defaults.
 
-### 路由与角色
+An online embedding provider may be used for intent matching, with local character n-gram vectors as fallback. On fallback, switch both the query vector and template vectors together. Intent vectors and knowledge-retrieval vectors serve different purposes and must not be compared across embedding spaces.
 
-General 负责通用咨询与补字段，Technical 负责错误码和排障计划，Billing 负责账单字段及金额核算，Escalation 生成确定性交接摘要。角色提示、可用工具和输出限制分别配置。主辅 Agent 可并行执行，合成失败时保留可用主回复；专业角色故障可回退 General，但尝试过有副作用的工具后禁止自动重做。
+### Roles and routing
 
-### 工具执行边界
+The General role handles broad questions and missing fields. Technical provides error-code explanations and low-risk diagnostic steps. Billing checks required fields and performs arithmetic on user-provided amounts. Escalation creates a deterministic handoff summary. Configure each role's prompt, tool allowlist, and output limits independently.
 
-模型只能请求工具，程序根据角色范围和 JSON Schema 决定能否执行。只读工具可配置超时、缓存与熔断；失败结果不能被当作已检索到的政策。MCP 连接必须声明服务、允许工具、角色范围和只读限制。外部服务只收到该工具所需参数，不默认发送完整历史或画像。
+Primary and supporting roles may run concurrently. If composition fails, preserve useful primary output with a clear partial status. A specialist failure may fall back to General, except after a side-effecting tool has been attempted; that operation must not be repeated automatically.
 
-未来接入退款等写操作前，先持久化不可自动重放的操作前回执。下游系统还需校验身份、业务授权和幂等键，并提供结果查询；仅有本服务回执不足以证明下游操作结果。
+### Tool execution boundaries
 
-## 6. 数据与持久化
+The model may request a tool, but application code checks its role allowlist and JSON Schema before execution. Read-only tools may use timeouts, caching, and circuit breakers. A failed retrieval must never be presented as a retrieved policy. MCP configuration must specify the server, allowed tools, eligible roles, and read-only restrictions. Send only the parameters required by the selected external tool; do not include full history or profile data by default.
 
-| 数据 | 建议存储 | 生命周期与一致性 |
+Before adding refund or other write tools, persist a non-replayable pre-operation receipt. The downstream system must enforce identity, business authorization, and idempotency keys and provide operation-status lookup. A local receipt alone cannot establish the outcome of a downstream operation.
+
+## 6. Data and Persistence
+
+| Data | Suggested store | Lifetime and consistency |
 | --- | --- | --- |
-| 近期消息、当前摘要、业务状态 | Redis | 参考实现为 24 小时 TTL；同会话锁保护读、改、提交。 |
-| 客户端消息回执 | Redis | 参考实现为 24 小时 TTL；相同 ID 返回原结果，消息不同时冲突。 |
-| 工具轨迹 | Redis | 参考实现保留 7 天及最近 200 条索引；输入和错误信息脱敏。 |
-| 知识文档片段 | ChromaDB `knowledge_base` | 按 `document_id` 或标题确定身份，记录内容版本和片段序号；更新时清理旧片段与缓存。 |
-| 情景记忆和画像 | ChromaDB 独立集合 | 按用户隔离；后台生成，失败保留已有数据。 |
-| 评测任务 | 首期进程内有界队列 | 参考实现为最多 8 个待处理、最近 50 个保留；重启丢失任务状态，需要持久任务时改用独立队列。 |
+| Recent messages, current summary, business state | Redis | Start with a 24-hour TTL; serialize reads and commits per conversation. |
+| Client message receipts | Redis | Start with a 24-hour TTL; identical retries return the saved result, changed content conflicts. |
+| Tool traces | Redis | Start with a 7-day TTL and a recent index capped at 200 entries; redact sensitive inputs and errors. |
+| Knowledge chunks | Vector database collection `knowledge_base` | Identify by `document_id` or title; store content version and chunk index; remove stale chunks and invalidate retrieval caches on update. |
+| Episodic memory and profiles | Separate vector database collections | Scope queries by user; write asynchronously and preserve existing data if generation fails. |
+| Evaluation jobs | Bounded in-process queue initially | Start with at most 8 unfinished jobs and retain up to 50 results; process restart loses job state. Use a durable queue if that is unacceptable. |
 
-知识上传支持 `.txt`、`.md`、`.json`，参考大小上限 10 MB。知识库切片参考 500 字符窗口，查询返回可追溯元数据。开发环境可用本地 ChromaDB 降级；生产环境连接失败应启动失败或返回明确错误，避免写入另一套无声分叉的数据。
+Support `.txt`, `.md`, and `.json` knowledge uploads, with an initial size limit of 10 MB. A 500-character chunk window is a reasonable starting point. Preserve title, document identity, version, and chunk index in retrieval results. Development may use a local vector database; production connection failure must be explicit and must not silently fork writes into a different store.
 
-## 7. API 草案
+## 7. API Outline
 
-路径与字段参考 Python 实现，正式开发时以 OpenAPI 契约为准。
+These paths form a starting contract. Publish the final schema through OpenAPI before client integration.
 
-| 方法与路径 | 用途 | 首期 |
+| Method and path | Purpose | Phase |
 | --- | --- | --- |
-| `GET /health` | 初始化状态；不代表模型凭据可用。 | P0 |
-| `POST /chat` | 对话、路由、回执与状态提交。 | P0 |
-| `POST /search` | 独立检索调试，`query` 和 `top_k` 走查询参数。 | P0 |
-| `POST /knowledge/add`、`POST /knowledge/upload`、`GET /knowledge/stats` | 文档导入、上传和片段统计。 | P0 |
-| `GET /skills`、`POST /skills/reload` | 规则状态与热加载。 | P1 |
-| `GET /trace/tool/{request_id}`、`GET /trace/tools` | 单次及近期脱敏轨迹。 | P1 |
-| `GET /monitor`、`GET /metrics` | 运行摘要与 Prometheus 指标。 | P1 |
-| `POST /eval/run`、`GET /eval/jobs/{job_id}` | 202 异步任务与结果轮询。 | P1 |
-| `GET /integrations/embedding`、`POST /integrations/embedding/check` | 检查意图向量实际来源。 | P1 |
-| `GET /integrations/mcp`、`POST /integrations/mcp/call`、`/mcp/` | 外部连接调试与本地 MCP 服务。 | P1 |
+| `GET /health` | Application readiness; does not prove model credentials work. | P0 |
+| `POST /chat` | Chat, routing, receipts, and state commit. | P0 |
+| `POST /search` | Retrieval diagnostics with `query` and `top_k` query parameters. | P0 |
+| `POST /knowledge/add`, `POST /knowledge/upload`, `GET /knowledge/stats` | Import, upload, and count knowledge chunks. | P0 |
+| `GET /skills`, `POST /skills/reload` | Inspect and reload business rules. | P1 |
+| `GET /trace/tool/{request_id}`, `GET /trace/tools` | Inspect a single or recent redacted trace. | P1 |
+| `GET /monitor`, `GET /metrics` | Runtime summary and Prometheus metrics. | P1 |
+| `POST /eval/run`, `GET /eval/jobs/{job_id}` | Submit an asynchronous evaluation and poll its result. | P1 |
+| `GET /integrations/embedding`, `POST /integrations/embedding/check` | Inspect the actual intent-vector provider. | P1 |
+| `GET /integrations/mcp`, `POST /integrations/mcp/call`, `/mcp/` | Inspect external MCP connections, debug approved tools, and serve local MCP tools. | P1 |
 
-错误处理至少区分 401 未认证、403 权限不足、409 消息 ID 冲突、422 请求无效、503 服务或执行失败、504 聊天超时，以及评测队列满时的 429。前端不能假设所有非 2xx 响应都有聊天响应结构。
+Distinguish at least these failures: 401 unauthenticated, 403 forbidden, 409 message-ID conflict, 422 invalid request, 503 service or execution failure, 504 chat timeout, and 429 when the evaluation queue is full. Clients must not assume every non-2xx response has the normal chat response shape.
 
-## 8. 部署与安全
+## 8. Deployment and Security
 
-参考部署为 FastAPI + Redis + ChromaDB + Prometheus + Nginx，前端可由 Vite 开发服务器或 Nginx 静态资源提供。容器内用服务名访问 Redis 和 ChromaDB，模型和 MCP 凭据仅在服务端环境变量或私密配置中。生产模式要求访问 Token，并区分用户与管理员；管理接口包括知识写入、规则重载、评测、轨迹与集成调试。
+Deploy the API with Redis, a vector database, Prometheus, and a reverse proxy. Serve the web console through a development server locally or as static assets behind the proxy. Containers should use service names for Redis and the vector database. Keep model and MCP credentials in server-side environment variables or a secret store; never expose them through public frontend variables.
 
-数据卷保存 Redis、ChromaDB 与监控数据；Skills、评测基线和日志单独挂载。部署前明确备份和恢复范围：进程内任务与缓存不会因卷持久化而恢复。开发示例知识不得自动导入生产。
+Production requires bearer authentication and separate customer and administrator roles. Protect knowledge writes, Skills reload, evaluations, trace access, monitoring, and integration diagnostics as administrative operations. Persist Redis, vector database, and monitoring data in explicit volumes; mount Skills, evaluation baselines, and logs separately. Document backup and restore boundaries: in-process jobs and caches do not survive a process restart. Never seed demonstration knowledge in production.
 
-## 9. 验证计划与需求映射
+## 9. Verification Plan and Requirement Mapping
 
-此处是未来实现的测试范围，非当前仓库已有的功能测试。单元测试覆盖意图投票、字段继承、路由、工具权限和文档切片；集成测试覆盖 Redis 回执与锁、知识更新、MCP 白名单；契约测试覆盖 API 状态码和前端响应适配；端到端评测覆盖多轮、复合诉求、超时、重试和生产鉴权。模型效果需使用独立标注集，避免只用演示样本判断准确率。
+The following checks are planned for implementation; they are not product tests already present in this repository. Unit tests should cover intent voting, state inheritance, routing, tool permissions, and document chunking. Integration tests should cover Redis receipts and locks, knowledge updates, and MCP allowlists. Contract tests should cover API status codes and frontend response adaptation. End-to-end evaluation should cover multi-turn context, mixed intents, timeouts, retries, and production authentication. Use an independent labeled set to measure model quality.
 
-| 需求 | 主要实现位置 | 关键验证 |
+| Requirement | Main component | Key verification |
 | --- | --- | --- |
-| FR-01 | API、响应模型 | 新会话与续聊契约 |
-| FR-02 | 意图识别器 | 三路融合与向量降级 |
-| FR-03 | 编排器、回复合成 | 主辅路由与升级 |
-| FR-04 | 角色工具、执行守卫 | 权限和参数拒绝 |
-| FR-05 | 知识库、RAG 工具 | 重导入与来源追溯 |
-| FR-06 | 记忆、业务状态 | 字段继承与清理 |
-| FR-07 | 会话锁、回执、提交 | 并发、冲突与重试 |
-| FR-08 | Escalation | 交接说明无虚构工单 |
-| FR-09 | Skill 管理器 | 匹配、重载和错误显示 |
-| FR-10 | 评测服务 | 任务进度、错误与回归 |
-| FR-11 | 监控、轨迹 | 脱敏、降权和恢复 |
-| FR-12 | Vue 界面、API 客户端 | 页面切换与状态隔离 |
-| FR-13 | MCP 客户端与服务端 | 白名单、只读和必要参数 |
+| FR-01 | API and response models | New conversation and continuation contracts |
+| FR-02 | Intent recognizer | Signal fusion and vector fallback |
+| FR-03 | Orchestrator and response composer | Primary/supporting routing and escalation |
+| FR-04 | Role tools and execution guard | Permission and schema rejection |
+| FR-05 | Knowledge store and retrieval tools | Reimport and source traceability |
+| FR-06 | Memory and business state | Field inheritance and clearing |
+| FR-07 | Conversation locks, receipts, and commits | Concurrency, conflict, and retry |
+| FR-08 | Escalation role | Handoff wording without fictitious tickets |
+| FR-09 | Skills manager | Matching, reload, and error reporting |
+| FR-10 | Evaluation service | Job progress, scoring errors, and regression checks |
+| FR-11 | Monitoring and traces | Redaction, routing penalties, and recovery |
+| FR-12 | Web console and API client | Backend switching and stale-response isolation |
+| FR-13 | MCP client and server | Allowlist, read-only behavior, and minimal parameters |
 
-## 10. 来源与待决策项
+## 10. Open Decisions
 
-主要依据：本地 `EchoMind/README.md`、`api/main.py`、`core/access.py`、`core/intent_recognizer.py`、`agents/agent_orchestrator.py`、`agents/tools.py`、`memory/conversation_memory.py`、`tooling/knowledge_base.py`、`tooling/mcp_client.py`、`tooling/mcp_server.py`、`evaluation/jobs.py`、`EchoMindFrontend/src/lib/backends.js` 和 `EchoMindJava/README.md`。其中 Python 为行为基线，Java 的独立实现不自动视作 Python 已有能力。
-
-正式开工前需确定：目标行业与知识内容、模型提供商、部署环境、身份系统、数据保留策略、可接受的效果指标，以及是否需要真实工单或支付系统集成。这些选择会改变模型成本、权限设计和验收基线。
+Before production, choose the target industry and knowledge content, model provider, deployment environment, identity provider, data-retention policy, measurable quality targets, and whether ticketing or payment systems must be integrated. These decisions affect model cost, permissions, data handling, and acceptance criteria.
