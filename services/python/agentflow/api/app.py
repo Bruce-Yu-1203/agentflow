@@ -52,12 +52,23 @@ def unavailable() -> None:
 def create_app(settings: Settings | None = None, orchestrator: Orchestrator | None = None, store: ConversationStore | None = None, knowledge: KnowledgeStore | None = None, skills_manager: SkillManager | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     settings.validate()
+    owns_model = orchestrator is None and bool(settings.model_api_key)
+    owns_store = store is None and settings.environment != "test"
     local_mcp = None
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         async with local_mcp.session_manager.run():
-            yield
+            try:
+                yield
+            finally:
+                closers = []
+                if owns_store:
+                    closers.append(app.state.store.redis.aclose())
+                if owns_model:
+                    closers.append(app.state.orchestrator.model.close())
+                if closers:
+                    await asyncio.gather(*closers, return_exceptions=True)
 
     app = FastAPI(title="AgentFlow API", version=__version__, description="English customer-support agent runtime", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=[value.strip() for value in settings.cors_origins.split(",") if value.strip()], allow_methods=["GET", "POST"], allow_headers=["Authorization", "Content-Type"], allow_credentials=False)

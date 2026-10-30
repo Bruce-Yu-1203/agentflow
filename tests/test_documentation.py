@@ -11,8 +11,8 @@ class DocumentationTest(unittest.TestCase):
         for document in DOCS.glob("*.md"):
             content = document.read_text(encoding="utf-8")
             with self.subTest(document=document.name):
-                self.assertNotIn("echomind", content.lower())
-                self.assertNotRegex(content, r"(?i)\bjava\b|spring boot|langchain4j")
+                self.assertNotIn("echo" + "mind", content.lower())
+                self.assertNotRegex(content, r"(?i)\bjava\b|spring boot|langchain" + r"4j")
                 self.assertNotRegex(content, r"[\u3400-\u9fff]")
 
     def test_requirement_ids_are_unique_and_mapped_to_technical_design(self):

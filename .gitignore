@@ -9,6 +9,7 @@ data/chroma/
 data/redis/
 data/eval/baseline.json
 logs/
+infra/prometheus.token
 dist/
 node_modules/
 *.egg-info/

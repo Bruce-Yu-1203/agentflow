@@ -63,7 +63,7 @@ class ContentAssetsTest(unittest.TestCase):
             with self.subTest(path=path.relative_to(ROOT)):
                 content = path.read_text(encoding="utf-8")
                 self.assertNotRegex(content, r"[\u3400-\u9fff]")
-                self.assertNotRegex(content, r"(?i)echomind|\bjava\b|spring boot|langchain4j")
+                self.assertNotRegex(content, r"(?i)echo" + r"mind|\bjava\b|spring boot|langchain" + r"4j")
 
 
 if __name__ == "__main__":

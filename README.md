@@ -29,6 +29,15 @@ npm run dev
 
 Open `http://localhost:5173`. The console includes chat with request inspection, knowledge search/import/upload, Skills status/reload, fixed-suite evaluation, monitoring, and integration diagnostics. The API URL can be changed under Connections. Access tokens remain in browser memory and clear on reload; use an administrator token for operations pages in production. The development API allows the console origins listed in `AGENTFLOW_CORS_ORIGINS`.
 
+## Complete Compose stack
+
+```sh
+docker compose -p agentflow -f infra/compose.yml up -d --build
+curl -fsS http://localhost:8080/api/health
+```
+
+The gateway serves the console at `http://localhost:8080` and the API under `/api`. Redis, Chroma, and Prometheus remain private to the Compose network. See [operations](docs/operations.md) for production tokens, startup behavior, backup and restore, and [release validation](docs/release-validation.md) for requirement evidence.
+
 ## CLI and verification
 
 ```sh
@@ -36,6 +45,7 @@ Open `http://localhost:5173`. The console includes chat with request inspection,
 .venv/bin/python -B -m unittest discover -s tests -q
 docker compose -f infra/compose.dev.yml config --quiet
 cd web && npm ci && npm test && npm run build
+bash scripts/verify_stack.sh
 ```
 
 With the Compose services running, set `AGENTFLOW_LIVE_SERVICES=1` while running the Python test command to include the Redis and Chroma integration check.
@@ -45,7 +55,7 @@ Use `/new` to start a new CLI conversation and `/exit` to leave. Set `--token` w
 ## Repository contents
 
 - `services/python/`: FastAPI service, orchestration, persistence, retrieval, MCP, evaluation, monitoring, and CLI.
-- `infra/`: local Redis and Chroma services.
+- `infra/`: local services and the complete deployment stack.
 - `web/`: English operations console and frontend state tests.
 - `config/`: MCP server allowlist configuration.
 - `data/knowledge/`: English demonstration knowledge.

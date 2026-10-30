@@ -1,6 +1,6 @@
 # AgentFlow Implementation Matrix
 
-> Scope: Python service through Stage 6. The English web console and release integration remain in Stages 7 and 8.
+> Scope: Python service, English web console, and deployment integration through Stage 8. See [release validation](release-validation.md) for passing checks and environment acceptance boundaries.
 
 ## Fixed behavior decisions
 
@@ -32,4 +32,4 @@
 
 ## Stage completion evidence
 
-For each stage, record the commit and push after its relevant checks pass. Stages 0–6 must leave a runnable or importable Python service at their stated boundary. A stage is complete only when its listed verification gate passes; later stages may expand earlier modules without changing their public contracts silently.
+Each stage is committed and pushed after its relevant checks pass. Stages 0–6 leave a runnable or importable Python service at their stated boundary. Stage 7 adds the web console; Stage 8 validates the complete deployment with a deterministic model fixture. Later changes must not silently change public contracts.

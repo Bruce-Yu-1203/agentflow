@@ -1,0 +1,12 @@
+.git
+.venv
+**/__pycache__
+**/*.pyc
+web/node_modules
+web/dist
+.env
+.env.*
+logs
+data/chroma
+data/redis
+infra/prometheus.token

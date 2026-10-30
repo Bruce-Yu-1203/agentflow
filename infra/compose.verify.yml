@@ -1,0 +1,21 @@
+services:
+  model-stub:
+    image: python:3.12-alpine
+    command: ["python", "/srv/fake_anthropic.py"]
+    volumes:
+      - ../tests/support/fake_anthropic.py:/srv/fake_anthropic.py:ro
+
+  api:
+    environment:
+      AGENTFLOW_ENV: production
+      AGENTFLOW_MODEL_API_KEY: release-test-only
+      AGENTFLOW_MODEL_BASE_URL: http://model-stub:8000
+      AGENTFLOW_MODEL_NAME: release-test-model
+      AGENTFLOW_API_TOKENS: '{"release-admin":{"user_id":"release-admin","role":"admin"},"release-customer":{"user_id":"release-customer","role":"customer"}}'
+    depends_on:
+      model-stub:
+        condition: service_started
+
+  prometheus:
+    ports:
+      - "127.0.0.1:9092:9090"

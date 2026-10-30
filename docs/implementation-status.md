@@ -1,6 +1,6 @@
 # Implementation Status
 
-The Python service and English web console now cover Stages 0–7. The checks use controlled model responses and fake storage where practical. An optional integration check also exercises the Compose Redis and Chroma services. These checks do not establish answer quality, production throughput, or compatibility with a particular external MCP server.
+The Python service, English web console, and Compose deployment now cover Stages 0–8. Unit checks use controlled model responses and fake storage where practical. The isolated release check exercises a real API, gateway, Redis, Chroma, and Prometheus with a deterministic test model. These checks do not establish answer quality, production throughput, or compatibility with a particular external MCP server.
 
 | Stage | Implemented | Remaining validation or scope |
 | --- | --- | --- |
@@ -12,5 +12,6 @@ The Python service and English web console now cover Stages 0–7. The checks us
 | 5 | Redacted traces, Prometheus metrics, specialist cooldown, bounded evaluation jobs, judge-error isolation, suite baselines, and labeled RAG recall and precision. | Broaden load and recovery tests and calibrate judge scores. |
 | 6 | Embedding diagnostics, documented API routes, CLI, readiness checks, production configuration validation, and a Redis/Chroma integration check. | Run a live model and approved external MCP integration pass in the target deployment. |
 | 7 | English Vue console for chat, request details, knowledge, Skills, evaluation, monitoring, and connection diagnostics; stable chat retries, stale response isolation, session-memory tokens, and CORS. | A configured model and administrator token are needed to exercise all flows against a production API. |
+| 8 | Complete Compose stack, gateway, authorized Prometheus scrape, isolated production-mode smoke check, English audit, requirement evidence, and operations runbook. | A live model, approved content and external MCP servers, production TLS, retention, and deployment-specific quality targets require environment acceptance. |
 
 The current runtime intentionally has no refund, payment, order update, or ticket-creation tool. Handoff responses prepare a summary and say that no ticket has been created. The local demonstration knowledge is sample material.
