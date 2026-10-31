@@ -56,6 +56,13 @@ class DocumentationTest(unittest.TestCase):
                 with self.subTest(document=document.name, target=target):
                     self.assertTrue((document.parent / target).is_file())
 
+    def test_complete_compose_instructions_explicitly_load_root_env_file(self):
+        readme = (DOCS.parent / "README.md").read_text(encoding="utf-8")
+        operations = (DOCS / "operations.md").read_text(encoding="utf-8")
+        self.assertIn("docker compose --env-file .env -p agentflow -f infra/compose.yml up", readme)
+        self.assertIn("docker compose --env-file .env -p agentflow -f infra/compose.yml up", operations)
+        self.assertIn("does not automatically load the repository root `.env`", operations)
+
     def test_status_records_completed_python_stages_and_remaining_work(self):
         status = (DOCS / "implementation-status.md").read_text(encoding="utf-8")
         readme = (DOCS.parent / "README.md").read_text(encoding="utf-8")

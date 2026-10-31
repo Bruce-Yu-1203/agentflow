@@ -31,8 +31,10 @@ Open `http://localhost:5173`. The console includes chat with request inspection,
 
 ## Complete Compose stack
 
+Create `.env` from `.env.example` if you do not already have one, then set the model provider values in `.env`.
+
 ```sh
-docker compose -p agentflow -f infra/compose.yml up -d --build
+docker compose --env-file .env -p agentflow -f infra/compose.yml up -d --build
 curl -fsS http://localhost:8080/api/health
 ```
 

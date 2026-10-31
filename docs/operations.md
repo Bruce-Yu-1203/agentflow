@@ -5,13 +5,19 @@
 The complete local stack needs Docker Compose. From a clean checkout, run:
 
 ```sh
-docker compose -p agentflow -f infra/compose.yml up -d --build
+cp .env.example .env
+```
+
+Set `AGENTFLOW_MODEL_API_KEY`, `AGENTFLOW_MODEL_NAME`, and `AGENTFLOW_MODEL_BASE_URL` in `.env`, then start the stack:
+
+```sh
+docker compose --env-file .env -p agentflow -f infra/compose.yml up -d --build
 curl -fsS http://localhost:8080/api/health
 ```
 
 Open `http://localhost:8080` for the English console. The gateway serves the web build at `/`, forwards `/api/` to the Python service, and forwards `/mcp/` with streaming enabled. Redis, Chroma, the API, the web server, and Prometheus stay on the Compose network; only the gateway listens on the host loopback interface by default. The API runs one worker because evaluation jobs, traces, and monitoring summaries are process-local. The API health check waits for Redis and Chroma before the gateway starts.
 
-The default development stack starts without a model key. Health, knowledge, Skills, and diagnostics are available; chat requires `AGENTFLOW_MODEL_API_KEY` and a compatible model configuration. Copy `.env.example` to `.env` to set the model and other options. Compose reads `.env` from the repository root when invoked there. The Python-only development path remains in the main README and uses `infra/compose.dev.yml` for exposed Redis and Chroma ports.
+The default development stack starts without a model key. Health, knowledge, Skills, and diagnostics are available; chat requires `AGENTFLOW_MODEL_API_KEY` and a compatible model configuration. Compose does not automatically load the repository root `.env` when its file is under `infra/`, so pass `--env-file .env` on every Compose command that needs those settings. The Python-only development path remains in the main README and uses `infra/compose.dev.yml` for exposed Redis and Chroma ports.
 
 Stop the complete stack without deleting stored data:
 
