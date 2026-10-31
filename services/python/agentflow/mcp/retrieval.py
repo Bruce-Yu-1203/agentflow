@@ -4,7 +4,7 @@ import asyncio
 import json
 from typing import Any
 
-from agentflow.core.knowledge import KnowledgeStore
+from agentflow.mcp.knowledge_base import KnowledgeStore
 from agentflow.core.model import ModelClient
 
 

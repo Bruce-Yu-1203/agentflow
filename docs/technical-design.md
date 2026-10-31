@@ -4,7 +4,7 @@
 
 ## 1. Status and Technology Direction
 
-The repository contains a Python 3.12/FastAPI runtime for the Stage 0–6 API path. This document also records the target design and development path for the remaining capabilities and a Vue/Vite web console. See the implementation status for verified coverage and outstanding work. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
+The repository contains a Python 3.12/FastAPI runtime, a Vue/Vite web console, and a Compose deployment for Stages 0–8. See the implementation status for verified coverage and outstanding work. Use a model provider that supports tool calling and a compatible messages API; select the provider, model, and budget for the deployment environment.
 
 Treat initial weights, timeout values, and evaluation scores as tunable defaults. Make them observable and validate them with a project-specific labeled set and load profile before setting production targets.
 
@@ -38,19 +38,23 @@ flowchart TD
 
 Keep knowledge documents, episodic memory, and user profiles in separate vector collections. Redis stores recent messages, current summaries, structured state, request receipts, locks, and short-lived traces. Redis and the vector database do not share a transaction; log background persistence failures and provide a recovery path.
 
+The Python package separates intent and Skills in `core/`, role orchestration and advisory handlers in `agents/`, retrieval and guarded tool execution in `mcp/`, conversation and long-term storage in `memory/`, evaluation in `evaluation/`, and HTTP wiring in `api/`. `mcp/knowledge_base.py` owns Chroma import and vector search; `mcp/retrieval.py` owns query rewriting and reranking. `mcp/tool_manager.py` owns tool registration, schemas, caching, timeouts, and circuit breaking; `mcp/client.py` and `mcp/server.py` adapt the external and local MCP protocols. Role fallback remains in `agents/agent_orchestrator.py` because it is a routing decision.
+
 ## 3. Component Responsibilities
 
-| Component | Responsibility |
-| --- | --- |
-| API and access control | Validate requests, resolve bearer identity, protect administrator endpoints, and define response and error contracts. |
-| Web console | Provide chat, knowledge, Skills, evaluation, connection settings, and request inspection for the Python API. |
-| Intent recognition | Fuse language-model, vector, and rule signals; return intent, domain, urgency, entities, confidence signals, and vector source. |
-| Agent orchestration | Clarify ambiguous requests, route urgent requests, select primary and supporting roles, execute in parallel, compose answers, and apply fallback behavior. |
-| Role tools | Provide deterministic context inspection, technical diagnostics, billing-field checks, amount comparison, and handoff summaries. |
-| Tool guard and MCP | Enforce role allowlists and schemas; apply timeout, cache, and circuit-breaker policies; discover and filter external tools. |
-| Knowledge retrieval | Import and chunk documents, track versions, retrieve passages, and optionally rewrite, deduplicate, and rerank queries. |
-| Conversation memory | Maintain recent messages, summaries, profiles, inherited fields, locks, receipts, and atomic turn commits. |
-| Operations | Reload Skills, publish metrics, store redacted traces, and run asynchronous evaluations with compatible regression baselines. |
+| Component | Module | Responsibility |
+| --- | --- | --- |
+| API and access control | `api/app.py`, `api/auth.py`, `api/contracts.py` | Validate requests, resolve bearer identity, protect administrator endpoints, and define response and error contracts. |
+| Web console | `web/src/` | Provide chat, knowledge, Skills, evaluation, connection settings, and request inspection for the Python API. |
+| Intent recognition | `core/intent_recognizer.py`, `core/embedding.py`, `core/state.py` | Fuse language-model, vector, and rule signals; return intent, urgency, entities, confidence signals, and vector source. |
+| Agent orchestration | `agents/agent_orchestrator.py` | Route urgent requests, select primary and supporting roles, execute in parallel, compose answers, and apply fallback behavior. |
+| Role tools | `agents/tools.py` | Provide deterministic context inspection, technical diagnostics, billing-field checks, amount comparison, and handoff summaries. |
+| Tool execution and MCP | `mcp/tool_manager.py`, `mcp/client.py`, `mcp/server.py` | Enforce role allowlists and schemas; apply timeout, cache, and circuit-breaker policies; discover and filter external tools. |
+| Knowledge retrieval | `mcp/knowledge_base.py`, `mcp/retrieval.py` | Import and chunk documents, track versions, retrieve passages, and optionally rewrite, deduplicate, and rerank queries. |
+| Skills | `core/skill_loader.py` | Load and filter guidance by role and keywords for inclusion in role prompts. |
+| Conversation memory | `memory/conversation_memory.py`, `memory/long_term.py` | Maintain recent messages, summaries, profiles, inherited fields, locks, receipts, and atomic turn commits. |
+| Evaluation | `evaluation/evaluator.py` | Score intent, dialogue, and retrieval suites with compatible regression baselines. |
+| Operations | `core/operations.py` | Publish metrics, retain redacted traces, and monitor specialist recovery. |
 
 ## 4. Chat Turn Lifecycle
 

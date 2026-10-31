@@ -6,10 +6,11 @@ import json
 import re
 from typing import Any
 
-from agentflow.agents.tools import ToolRegistry, create_handoff_summary
-from agentflow.core.intent import IntentRecognizer, IntentResult
+from agentflow.agents.tools import create_handoff_summary
+from agentflow.core.intent_recognizer import IntentRecognizer, IntentResult
 from agentflow.core.model import ModelClient
 from agentflow.core.state import merge_state
+from agentflow.mcp.tool_manager import ToolRegistry
 
 
 ROLE_PROMPTS = {

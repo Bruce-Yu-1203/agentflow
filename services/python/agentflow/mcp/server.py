@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import ToolAnnotations
 
-from agentflow.core.knowledge import KnowledgeStore
+from agentflow.mcp.knowledge_base import KnowledgeStore
 
 
 def build_mcp_server(get_knowledge: Callable[[], KnowledgeStore], allowed_hosts: list[str] | None = None) -> FastMCP:

@@ -11,8 +11,8 @@ from redis.asyncio import Redis
 
 from agentflow.api.app import create_app
 from agentflow.config import Settings
-from agentflow.core.knowledge import KnowledgeStore
-from agentflow.core.memory import ConversationStore
+from agentflow.mcp.knowledge_base import KnowledgeStore
+from agentflow.memory.conversation_memory import ConversationStore
 
 
 @unittest.skipUnless(os.getenv("AGENTFLOW_LIVE_SERVICES") == "1", "Live services are optional")

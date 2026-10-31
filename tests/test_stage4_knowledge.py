@@ -10,11 +10,11 @@ from fastapi.testclient import TestClient
 
 from agentflow.api.app import create_app
 from agentflow.config import Settings
-from agentflow.core.knowledge import KnowledgeStore, chunk_text, parse_upload
-from agentflow.core.mcp import MCPManager
-from agentflow.core.skills import SkillManager
-from agentflow.core.retrieval import RetrievalPipeline
-from agentflow.agents.tools import ToolRegistry, ToolSpec
+from agentflow.mcp.knowledge_base import KnowledgeStore, chunk_text, parse_upload
+from agentflow.mcp.client import MCPManager
+from agentflow.core.skill_loader import SkillManager
+from agentflow.mcp.retrieval import RetrievalPipeline
+from agentflow.mcp.tool_manager import ToolRegistry, ToolSpec
 
 
 class Stage4Tests(unittest.TestCase):

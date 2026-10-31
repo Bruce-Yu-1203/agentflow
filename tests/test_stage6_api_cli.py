@@ -5,13 +5,13 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from agentflow.agents.orchestrator import Orchestrator
+from agentflow.agents.agent_orchestrator import Orchestrator
 from agentflow.api.app import create_app
 from agentflow.cli import run_chat
 from agentflow.config import Settings
-from agentflow.core.intent import IntentRecognizer
+from agentflow.core.intent_recognizer import IntentRecognizer
 from agentflow.core.model import ModelReply
-from agentflow.core.knowledge import KnowledgeStore
+from agentflow.mcp.knowledge_base import KnowledgeStore
 import chromadb
 
 

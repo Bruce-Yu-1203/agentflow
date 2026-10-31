@@ -7,10 +7,10 @@ from fastapi.testclient import TestClient
 
 from agentflow.api.app import create_app
 from agentflow.config import Settings
-from agentflow.core.evaluation import EvaluationService
+from agentflow.evaluation.evaluator import EvaluationService
 from agentflow.core.model import ModelReply
 from agentflow.core.operations import Operations, redact
-from agentflow.core.knowledge import KnowledgeStore
+from agentflow.mcp.knowledge_base import KnowledgeStore
 import chromadb
 
 

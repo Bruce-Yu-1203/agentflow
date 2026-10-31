@@ -8,12 +8,12 @@ import fakeredis.aioredis
 import chromadb
 from fastapi.testclient import TestClient
 
-from agentflow.agents.orchestrator import Orchestrator
+from agentflow.agents.agent_orchestrator import Orchestrator
 from agentflow.api.app import create_app
 from agentflow.config import Settings
-from agentflow.core.intent import IntentRecognizer
-from agentflow.core.memory import ConversationStore, LeaseLost
-from agentflow.core.longterm import LongTermMemory
+from agentflow.core.intent_recognizer import IntentRecognizer
+from agentflow.memory.conversation_memory import ConversationStore, LeaseLost
+from agentflow.memory.long_term import LongTermMemory
 from agentflow.core.model import ModelReply
 
 

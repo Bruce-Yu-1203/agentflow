@@ -30,19 +30,19 @@ from agentflow.api.contracts import (
 )
 from agentflow.config import Settings
 from agentflow.api.auth import require_admin, resolve_identity
-from agentflow.agents.orchestrator import Orchestrator
+from agentflow.agents.agent_orchestrator import Orchestrator
 from agentflow.core.embedding import IntentEmbedding
-from agentflow.core.intent import IntentRecognizer
+from agentflow.core.intent_recognizer import IntentRecognizer
 from agentflow.core.model import AnthropicModelClient
-from agentflow.core.memory import ConversationStore, LeaseLost, ReceiptConflict
-from agentflow.core.knowledge import KnowledgeStore, parse_upload
-from agentflow.core.skills import SkillManager
-from agentflow.core.mcp import MCPManager
-from agentflow.core.retrieval import RetrievalPipeline
-from agentflow.core.mcp_server import build_mcp_server
+from agentflow.memory.conversation_memory import ConversationStore, LeaseLost, ReceiptConflict
+from agentflow.mcp.knowledge_base import KnowledgeStore, parse_upload
+from agentflow.core.skill_loader import SkillManager
+from agentflow.mcp.client import MCPManager
+from agentflow.mcp.retrieval import RetrievalPipeline
+from agentflow.mcp.server import build_mcp_server
 from agentflow.core.operations import Operations
-from agentflow.core.evaluation import EvaluationQueueFull, EvaluationService
-from agentflow.core.longterm import LongTermMemory
+from agentflow.evaluation.evaluator import EvaluationQueueFull, EvaluationService
+from agentflow.memory.long_term import LongTermMemory
 
 
 def unavailable() -> None:

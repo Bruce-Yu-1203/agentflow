@@ -5,11 +5,11 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from agentflow.agents.orchestrator import Orchestrator
-from agentflow.agents.tools import ToolRegistry
+from agentflow.agents.agent_orchestrator import Orchestrator
+from agentflow.mcp.tool_manager import ToolRegistry
 from agentflow.api.app import create_app
 from agentflow.config import Settings
-from agentflow.core.intent import IntentRecognizer
+from agentflow.core.intent_recognizer import IntentRecognizer
 from agentflow.core.model import ModelReply, ToolCall
 from agentflow.core.state import extract_entities, merge_state
 

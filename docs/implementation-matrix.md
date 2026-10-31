@@ -15,20 +15,20 @@
 
 | Requirement | Target module | Stage | Verification gate |
 | --- | --- | --- | --- |
-| FR-01 | `api.main`, request and response models | 1, 6 | New and continuing chat contracts, invalid input |
-| FR-02 | `core.intent` and `core.embedding` | 2 | Fine intent fusion, provenance, entity extraction, fallback |
-| FR-03 | `agents.orchestrator` | 2 | Primary and supporting routing, escalation, partial result |
-| FR-04 | `agents.tools`, `tooling.manager` | 2, 4 | Role allowlists, schema rejection, bounded execution |
-| FR-05 | `tooling.knowledge`, `tooling.rag` | 4 | Upsert, stale-chunk removal, evidence, retrieval gate |
-| FR-06 | `memory.store`, `core.state` | 3 | Current context, task reset, summary and profile isolation |
-| FR-07 | `memory.store`, `core.concurrency` | 3 | Lease, receipt conflict, atomic commit, safe retry |
-| FR-08 | `agents.escalation` | 2 | Factual handoff without invented ticket acceptance |
-| FR-09 | `core.skills` | 4 | Role and keyword matching, reload, malformed file isolation |
-| FR-10 | `evaluation.runner`, `evaluation.jobs` | 5 | Metrics, judge errors, progress, compatible baseline |
-| FR-11 | `monitor.metrics`, `core.trace` | 5 | Redaction, alert thresholds, route penalty and recovery |
+| FR-01 | `api.app`, `api.contracts` | 1, 6 | New and continuing chat contracts, invalid input |
+| FR-02 | `core.intent_recognizer`, `core.embedding` | 2 | Fine intent fusion, provenance, entity extraction, fallback |
+| FR-03 | `agents.agent_orchestrator` | 2 | Primary and supporting routing, escalation, partial result |
+| FR-04 | `agents.tools`, `mcp.tool_manager` | 2, 4 | Role allowlists, schema rejection, bounded execution |
+| FR-05 | `mcp.knowledge_base`, `mcp.retrieval` | 4 | Upsert, stale-chunk removal, evidence, retrieval gate |
+| FR-06 | `memory.conversation_memory`, `memory.long_term`, `core.state` | 3 | Current context, task reset, summary and profile isolation |
+| FR-07 | `memory.conversation_memory` | 3 | Lease, receipt conflict, atomic commit, safe retry |
+| FR-08 | `agents.agent_orchestrator`, `agents.tools` | 2 | Factual handoff without invented ticket acceptance |
+| FR-09 | `core.skill_loader` | 4 | Role and keyword matching, reload, malformed file isolation |
+| FR-10 | `evaluation.evaluator` | 5 | Metrics, judge errors, progress, compatible baseline |
+| FR-11 | `core.operations` | 5 | Redaction, alert thresholds, route penalty and recovery |
 | FR-12 | `web` | 7 | Chat, knowledge, evaluation, settings, stale response isolation |
-| FR-13 | `tooling.mcp_client`, `tooling.mcp_server` | 4 | Allowlist, read-only discovery, reconnection, minimal input |
-| FR-14 | `api.cli`, `infra`, `web` | 6–8 | English audit, CLI, Compose and clean-start integration |
+| FR-13 | `mcp.client`, `mcp.server` | 4 | Allowlist, read-only discovery, reconnection, minimal input |
+| FR-14 | `cli`, `infra`, `web` | 6–8 | English audit, CLI, Compose and clean-start integration |
 
 ## Stage completion evidence
 

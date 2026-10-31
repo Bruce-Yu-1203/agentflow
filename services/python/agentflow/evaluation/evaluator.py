@@ -8,8 +8,8 @@ import math
 from typing import Any
 from uuid import uuid4
 
-from agentflow.agents.orchestrator import Orchestrator
-from agentflow.core.intent import IntentRecognizer
+from agentflow.agents.agent_orchestrator import Orchestrator
+from agentflow.core.intent_recognizer import IntentRecognizer
 from agentflow.core.model import ModelClient
 
 

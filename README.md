@@ -56,7 +56,12 @@ Use `/new` to start a new CLI conversation and `/exit` to leave. Set `--token` w
 
 ## Repository contents
 
-- `services/python/`: FastAPI service, orchestration, persistence, retrieval, MCP, evaluation, monitoring, and CLI.
+- `services/python/agentflow/api/`: FastAPI contracts, authentication, and endpoint wiring.
+- `services/python/agentflow/core/`: intent recognition, embedding, Skills loading, model client, state, and operations.
+- `services/python/agentflow/agents/`: role orchestration and domain-specific tools.
+- `services/python/agentflow/mcp/`: knowledge base, retrieval, guarded tool execution, and MCP client/server adapters.
+- `services/python/agentflow/memory/`: Redis conversations and Chroma long-term memory.
+- `services/python/agentflow/evaluation/`: intent, dialog, and retrieval evaluation.
 - `infra/`: local services and the complete deployment stack.
 - `web/`: English operations console and frontend state tests.
 - `config/`: MCP server allowlist configuration.
