@@ -1,0 +1,766 @@
+{
+  "intent_cases": [
+    {
+      "message": "Where can I change the name shown on my profile?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I need to update the email address linked to my account.",
+      "expected_intent": "account"
+    },
+    {
+      "message": "How do I close an account that I no longer need?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "Can I change the phone number in my profile settings?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I would like to update my account's preferred language.",
+      "expected_intent": "account"
+    },
+    {
+      "message": "How can I edit the contact details on my profile?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I need to remove an old address from my saved account details.",
+      "expected_intent": "account"
+    },
+    {
+      "message": "Where do I manage the email preferences for my account?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "Can I change the organization name displayed in the account?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I want to update my profile information before placing an order.",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I noticed a sign-in from a device I do not recognize.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "Someone may have accessed my account without permission.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I received a security alert for a login I did not make.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I think my password was exposed and want to secure my profile.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "There are unfamiliar sessions listed in my account activity.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I clicked a suspicious link and now I am worried about my account.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "My account details changed even though I did not update them.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I want to enable two-step verification to protect my account.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "A sign-in notification came from a country where I am not located.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I am concerned that somebody is trying to take over my account.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I have a question about the billing cycle on my account.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "Could you explain the charge categories shown on my statement?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I need help understanding the billing section of my profile.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "When should I expect the next monthly statement?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "Can you clarify how subscription billing dates are determined?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I would like information about the billing contact for a plan.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "The statement uses a term I do not understand; can you explain it?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "How can I find the billing history for a previous month?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I have a general question about charges listed for a subscription.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "Where can I review the billing terms for this service?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I have contacted support twice and still have no useful answer.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "The checkout page keeps failing and this experience has been frustrating.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "I waited all afternoon for an update that never arrived.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "Your last reply ignored the main issue I described.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "This is the third time I have had to explain the same problem.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "The delivery estimate changed again and I am unhappy with the service.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "I am disappointed that nobody followed up after promising to do so.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "The instructions I received were confusing and wasted my time.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "I should not have to chase the team for a basic status update.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "The app has been unreliable all week and the experience is poor.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "Please escalate this case to a supervisor for review.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "I need a manager to review the way this complaint was handled.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "This unresolved issue should be escalated to the next support level.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Could a supervisor take ownership of this case?",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Please arrange an urgent management review of my unresolved request.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "I want this complaint escalated because the previous steps failed.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Please send this case to someone with authority to review the decision.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "The issue has remained unresolved, so I am requesting escalation.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Can you have a team lead review the repeated service failures?",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "This needs escalation to a senior support specialist.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Thanks, that explanation solved my question.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "The support specialist was patient and very clear.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "I appreciate the quick and helpful response.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "That step worked perfectly; thank you.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "Your instructions were easy to follow.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "I am happy with the help I received today.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "The follow-up was thoughtful and useful.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "Thanks for explaining the options without rushing me.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "This was a much smoother support experience than I expected.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "The troubleshooting guide fixed the issue for me.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "Hi there!",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hello, good morning.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hey, is support available?",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Good afternoon!",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hi, I just opened the help page.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hello! Hope your day is going well.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Good evening, can someone help me?",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hey there.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hi, thanks for being here.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hello support team.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Please connect me with a real person who can review this.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I would rather speak with a human support agent.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Can you transfer this chat to a live representative?",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I need to talk to a person instead of an automated assistant.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Please put me in touch with a human being.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Could someone from the support team join this conversation?",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I want a live agent to take over from here.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Can you connect this conversation to a person?",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Please transfer me to a customer service representative.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I would like a human to help me with the next steps.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Where can I download the invoice for my last purchase?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "The invoice has the wrong company name; how can I correct it?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Can you send an electronic invoice for this order?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "I need to add my tax number to an invoice that was already issued.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "How do I get a receipt that includes the billing address?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "The invoice download link is missing from my order page.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Can an invoice be reissued with an updated billing name?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "I need a copy of the tax invoice for last month's order.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Where do I find the invoice history in my account?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Could you explain how to request an invoice after checkout?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "The carrier tracking page has shown the same location for three days.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "How long does standard delivery usually take to my area?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "My parcel has not arrived and the estimated date passed yesterday.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "Can I change the shipping address before this package leaves the warehouse?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "The tracking link says label created but has no movement.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "Does express delivery arrive on weekends?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "My package has been marked shipped for eight days with no delivery.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "What should I do when a courier cannot find my building?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "Can you explain the delivery fee for a remote area?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "The tracking number does not show any carrier scans yet.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "Can you tell me the current status of order AG-84127?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Has order AG-22590 moved past pending payment yet?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "I am checking whether order AG-73518 has shipped.",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "What does the status delivered mean for order AG-66241?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Could you check if order AG-91036 is marked as completed?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Order AG-40852 still says paid; what is its next status?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Has the warehouse updated the status of order AG-30174?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "I would like to know where order AG-58703 is in the fulfillment process.",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Can you look up the status for order AG-11964?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "My order page says shipped; is that the latest status for AG-45208?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "What is the capital city of Portugal?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Can you suggest an easy vegetarian dinner recipe?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Write a short poem about a rainy afternoon.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "How many planets are in the solar system?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "I am planning a weekend hike near Vancouver; any ideas?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Explain how a solar eclipse works in simple terms.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Could you recommend a few classic science fiction novels?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "What is the best way to grow basil indoors?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Tell me a fun fact about dolphins.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Help me plan a three-day sightseeing trip in Rome.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "My card was charged twice for a single order.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "The checkout says payment failed, but my bank shows a pending charge.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "I see a transaction I do not recognize from this service.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "The payment page timed out after I confirmed the purchase.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "I was charged the wrong amount at checkout.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "My bank declined the payment, although the available balance is enough.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "A duplicate charge appeared on my statement this morning.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "The payment succeeded at my bank but the order still shows unpaid.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "I received two payment confirmations for one purchase.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "The card authorization is still pending several days later.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "Where can I read the rules for changing my delivery address?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Does the membership program have a page that explains its benefits?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "How does standard shipping differ from express shipping?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Can you explain what the order status labels mean?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Where do I find the current return instructions?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "What information should I include when I contact support?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Could you clarify how the birthday points promotion works?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Is there a guide for checking whether an item has shipped?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "How can I learn what the different membership tiers include?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Where can I see the usual refund review timeline?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "I bought this five days ago and would like to return it for a refund.",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "How long does a refund usually take after it is approved?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "The product arrived damaged; what evidence should I provide for a return?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Can I request a refund for an item that has already shipped?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "I changed my mind about a purchase made last week; what is the return process?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "My return was approved, but the money has not appeared on my card yet.",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "What is the return window for an item without a quality issue?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Do I need to send the item back before a refund is processed?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "The package is unopened; can I still ask for a refund?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Who pays the return shipping cost if the item has a defect?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Please update the contact email on my profile.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Can you send me a copy of the instructions in a shorter format?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Please help me change the language used for notifications.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "I need to update the phone number associated with my profile.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Could you help me turn off promotional messages?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Please show me how to download a copy of my account information.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Can you help me change my preferred contact method?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "I would like to update the display name shown in my profile.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Please help me find the form for correcting an address.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Could you walk me through changing my notification settings?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "The search results page shows an error after I submit a query.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "My dashboard freezes when I open the reports section.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The settings page takes a long time to load on my laptop.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "I see a blank screen after selecting the analytics tab.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The export button does nothing when I click it.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "A warning appears whenever I try to save a workspace.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The application is returning an unexpected error on the projects page.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The report download stops before the file is complete.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The filter controls are not responding in the web console.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "My dashboard data disappears after I refresh the page.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The mobile app closes whenever I open the order history screen.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The website crashes after I upload a large report.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "I get an HTTP 500 error when saving the workspace settings.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The application quits unexpectedly when I export a dashboard.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The page crashes every time I open the analytics chart.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "A server error appears after I submit the search form.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The app freezes and closes when I tap the notifications tab.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "My browser shows a 500 response on the report detail page.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The desktop client exits when I switch between projects.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The page becomes unresponsive and then crashes during checkout.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The sign-in form returns error 401 after I enter my details.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "I cannot get into my account even though I reset my password.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The verification code never arrives on my registered phone.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The login page keeps sending me back to the sign-in screen.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "My session expires immediately after I authenticate.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The app says my token is invalid every time I try to sign in.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "I can reach the website but authentication fails with 401.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The password reset link works, but the new password will not log me in.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "Single sign-on redirects forever and never opens my workspace.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "I am locked in a loop between the login page and the dashboard.",
+      "expected_intent": "technical_login"
+    }
+  ],
+  "dialog_cases": [],
+  "rag_cases": []
+}

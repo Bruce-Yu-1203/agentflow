@@ -1,0 +1,698 @@
+{
+  "intent_cases": [
+    {
+      "message": "How do I add a secondary contact to my account?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "The name on my profile is outdated; where can I correct it?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "Can you explain how to switch the default region for my account?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "I need help finding the page to manage my account details.",
+      "expected_intent": "account"
+    },
+    {
+      "message": "How do I remove a phone number that is no longer mine?",
+      "expected_intent": "account"
+    },
+    {
+      "message": "The recovery email on my profile was changed unexpectedly.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I received a one-time code that I did not request.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "How should I report a suspicious sign-in attempt?",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "I think another person is using my account right now.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "My security settings were changed without my approval.",
+      "expected_intent": "account_security"
+    },
+    {
+      "message": "Can you explain whether billing is monthly or annual?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I need help finding the billing address in my account settings.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "What does the service fee line on a statement usually represent?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "Could you describe how plan changes affect the billing period?",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I want to understand the billing dates before renewing.",
+      "expected_intent": "billing"
+    },
+    {
+      "message": "I am frustrated by how long it took to get a response.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "The answer I got was too vague to help me solve anything.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "My order arrived later than expected and I am unhappy about it.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "This support experience has been disappointing from the start.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "I keep receiving different answers to the same question.",
+      "expected_intent": "complaint"
+    },
+    {
+      "message": "Please ask a supervisor to examine the conflicting answers I received.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "I am requesting a formal escalation of my open complaint.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Could you raise this case to the next level of support?",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "Please route this unresolved billing dispute to a manager.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "A team lead needs to review the handling of this case.",
+      "expected_intent": "escalation"
+    },
+    {
+      "message": "I appreciate the clear summary of what to do next.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "The representative handled my question professionally.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "Everything is working now, and I wanted to say thanks.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "That answer was exactly what I needed.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "The new help page is organized and easy to understand.",
+      "expected_intent": "feedback"
+    },
+    {
+      "message": "Morning!",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hi, I have just signed in.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Good afternoon, support.",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hello, anyone online?",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Hey, how is it going?",
+      "expected_intent": "greeting"
+    },
+    {
+      "message": "Is there a live person available to speak with me?",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Please hand this chat to a real support representative.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I need a person to review the details with me directly.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "Could you arrange a conversation with a human agent?",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "I do not want to continue with an automated assistant; connect me to support.",
+      "expected_intent": "human_handoff"
+    },
+    {
+      "message": "The receipt does not show the tax details I need for reimbursement.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Can the billing name on my invoice be changed to my business name?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "I have not received the electronic invoice for a completed purchase.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "How can I download a duplicate copy of my invoice?",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Please tell me what information is required to correct an invoice.",
+      "expected_intent": "invoice"
+    },
+    {
+      "message": "Will a holiday delay the delivery window this week?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "I need to know whether a package is out for delivery today.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "The driver could not deliver because the address details were incomplete.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "How can I request a carrier investigation for a delayed parcel?",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "I selected express shipping but the tracking estimate looks much later.",
+      "expected_intent": "logistics"
+    },
+    {
+      "message": "Is order AG-86420 still awaiting payment confirmation?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Please help me understand the latest status shown for order AG-77731.",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "I cannot tell whether order AG-60128 has been dispatched.",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Could you verify the fulfillment stage for order AG-94315?",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "The status for order AG-35682 has not changed since checkout.",
+      "expected_intent": "order_status"
+    },
+    {
+      "message": "Can you translate this sentence into French: the train is late?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "What ingredients go into a traditional lentil soup?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Give me a beginner's stretching routine for after a walk.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Why do leaves change color in autumn?",
+      "expected_intent": "other"
+    },
+    {
+      "message": "Suggest a name for a small orange cat.",
+      "expected_intent": "other"
+    },
+    {
+      "message": "My digital wallet payment was rejected and I cannot retry it.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "There is an unexpected charge from the checkout on my account.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "I paid but the confirmation page showed an error.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "The transaction amount differs from the total I confirmed.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "My payment is stuck in processing and I have no order confirmation.",
+      "expected_intent": "payment_issue"
+    },
+    {
+      "message": "Could you explain the steps in the account recovery process?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Do you have general guidance for a page that loads slowly?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "What is the difference between an invoice and a payment receipt?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "Where can I find the delivery hours for local orders?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "How are points calculated on a regular purchase?",
+      "expected_intent": "query"
+    },
+    {
+      "message": "I purchased this more than a week ago and found a quality problem.",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Can you explain what happens after I submit a refund request?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "I need to return an item that does not match its description.",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "The refund was approved last week; when should I check the original payment method?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "Can a no-reason return be requested within seven days of purchase?",
+      "expected_intent": "refund"
+    },
+    {
+      "message": "I need instructions for closing an account I no longer use.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Can you tell me how to add an alternate email address?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Please help me remove an outdated preference from my profile.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "Could someone guide me through changing my saved region?",
+      "expected_intent": "request"
+    },
+    {
+      "message": "I want to opt out of the weekly product newsletter.",
+      "expected_intent": "request"
+    },
+    {
+      "message": "I cannot open the activity panel because it keeps timing out.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The chart area is empty even though the report has data.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The application becomes very slow when I switch workspaces.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The save operation fails on the configuration screen.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "The browser console shows an error when I open the billing settings.",
+      "expected_intent": "technical"
+    },
+    {
+      "message": "I see an internal server error when opening the invoice history.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The mobile app closes immediately after I choose a saved address.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The upload screen crashes before it finishes processing the file.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The application throws a 500 error when I try to create a new report.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The browser tab crashes after the dashboard has been open for a while.",
+      "expected_intent": "technical_crash"
+    },
+    {
+      "message": "The one-time verification code is rejected even when entered promptly.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The mobile app says sign-in failed while the website accepts the same account.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "I get a 401 response when the application refreshes my session.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "The authentication request fails after I switch to the production environment.",
+      "expected_intent": "technical_login"
+    },
+    {
+      "message": "I cannot complete login because the confirmation email link expires instantly.",
+      "expected_intent": "technical_login"
+    }
+  ],
+  "dialog_cases": [
+    {
+      "turns": [
+        "I paid for order AG-84127 yesterday, but it still says pending payment.",
+        "Can you tell me its current order status?"
+      ],
+      "expected_agent": "general",
+      "expected_intent": "order_status",
+      "reference_answer": "Explain that live order details are not available in chat and ask for the order ID or direct the customer to an authorized order lookup.",
+      "evidence": "The order status guide says an order ID is needed and live status must not be claimed without an authorized system result."
+    },
+    {
+      "turns": [
+        "I bought a jacket six days ago and changed my mind.",
+        "How do I request a refund and how long does review take?"
+      ],
+      "expected_agent": "billing",
+      "expected_intent": "refund",
+      "reference_answer": "Describe the sample seven-day return window and one-to-three-business-day review, while explaining that eligibility must be checked against the actual order.",
+      "evidence": "The demo refund policy allows a no-reason request within seven days and says review normally takes one to three business days."
+    },
+    {
+      "turns": [
+        "I keep getting a login error.",
+        "The sign-in page returns HTTP 401 after I enter my password."
+      ],
+      "expected_agent": "technical",
+      "expected_intent": "technical_login",
+      "reference_answer": "Explain that 401 usually indicates an authentication issue and suggest checking sign-in state, token expiry, and environment without sharing credentials.",
+      "evidence": "The technical troubleshooting guide describes 401 and warns against exposing credentials."
+    },
+    {
+      "turns": [
+        "I have a payment question about yesterday's checkout.",
+        "My card shows two charges for the same order."
+      ],
+      "expected_agent": "billing",
+      "expected_intent": "payment_issue",
+      "reference_answer": "Acknowledge the duplicate charge report and ask for transaction time and payment channel; do not claim to verify or reverse a charge.",
+      "evidence": "The troubleshooting guidance says to collect transaction time and payment channel and route financial outcomes to billing review."
+    },
+    {
+      "turns": [
+        "I saw an unfamiliar session in my account.",
+        "I did not make that sign-in and want to secure the account."
+      ],
+      "expected_agent": "technical",
+      "expected_intent": "account_security",
+      "reference_answer": "Recommend securing the account and using the official identity-verification channel; never request passwords, codes, or recovery keys.",
+      "evidence": "The account security guide covers suspicious sign-ins, account security steps, and sensitive information that must not be requested."
+    },
+    {
+      "turns": [
+        "My delivery estimate has moved twice.",
+        "The package has been marked shipped for eight days and has not arrived."
+      ],
+      "expected_agent": "general",
+      "expected_intent": "logistics",
+      "reference_answer": "Ask for the order ID and explain that a carrier investigation may be requested when an order remains undelivered after seven days from shipment.",
+      "evidence": "The order status guide gives the seven-day shipped-but-not-arrived threshold and asks support to collect the order ID."
+    },
+    {
+      "turns": [
+        "I need help with a document for my purchase.",
+        "The invoice has the wrong company name. How can it be corrected?"
+      ],
+      "expected_agent": "billing",
+      "expected_intent": "invoice",
+      "reference_answer": "Explain that the invoice request needs review and ask for the relevant order reference without claiming the document was changed.",
+      "evidence": "The sample billing guidance requires verification of actual purchase records before confirming an invoice change."
+    },
+    {
+      "turns": [
+        "The app is unstable on my phone.",
+        "It closes as soon as I open order history."
+      ],
+      "expected_agent": "technical",
+      "expected_intent": "technical_crash",
+      "reference_answer": "Ask for app version, device, time, and reproduction steps, then suggest a low-risk restart or update where appropriate.",
+      "evidence": "The technical troubleshooting guide lists crash-report details and low-risk restart or update steps."
+    },
+    {
+      "turns": [
+        "Can you help me with my profile?",
+        "I want to change the email address used for account notifications."
+      ],
+      "expected_agent": "technical",
+      "expected_intent": "account",
+      "reference_answer": "Give general guidance for updating profile contact details and avoid claiming that the account was changed.",
+      "evidence": "The account guidance describes safe account recovery and does not provide live profile access."
+    },
+    {
+      "turns": [
+        "I have a question about my package.",
+        "The tracking page has shown the same carrier location for three days."
+      ],
+      "expected_agent": "general",
+      "expected_intent": "logistics",
+      "reference_answer": "Acknowledge the tracking delay and ask for the order ID or carrier tracking reference before promising an investigation.",
+      "evidence": "The delivery guide says tracking and arrival estimates depend on the order and carrier records."
+    }
+  ],
+  "rag_cases": [
+    {
+      "query": "I bought it six days ago and changed my mind. Can I still request a refund?",
+      "relevant_document_ids": [
+        "demo-refund-policy"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How many business days does the review usually take after a refund request?",
+      "relevant_document_ids": [
+        "demo-refund-policy"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Once the refund is approved, when should the money return to my original card?",
+      "relevant_document_ids": [
+        "demo-refund-policy"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "The order already shipped. Do I need to complete a return before a refund?",
+      "relevant_document_ids": [
+        "demo-refund-policy"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Who pays return postage when a product has a quality defect?",
+      "relevant_document_ids": [
+        "demo-refund-policy"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Which order statuses can appear between payment and completion?",
+      "relevant_document_ids": [
+        "demo-order-status"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "When do tracking details normally show after an order ships?",
+      "relevant_document_ids": [
+        "demo-order-status"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "My order has shown shipped for eight days. What information should I provide?",
+      "relevant_document_ids": [
+        "demo-order-status"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Can support check an order if I share its order ID?",
+      "relevant_document_ids": [
+        "demo-order-status"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What should I do if the status on the order page looks inconsistent?",
+      "relevant_document_ids": [
+        "demo-order-status"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What should I do if I see a sign-in I do not recognize?",
+      "relevant_document_ids": [
+        "demo-account-security"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How long should a recommended password be, and what should it contain?",
+      "relevant_document_ids": [
+        "demo-account-security"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Can I use a verified email to recover a forgotten password?",
+      "relevant_document_ids": [
+        "demo-account-security"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Should I send my one-time code to support to prove my identity?",
+      "relevant_document_ids": [
+        "demo-account-security"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What should I do after noticing suspicious account activity?",
+      "relevant_document_ids": [
+        "demo-account-security"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What does an HTTP 401 usually indicate, and what can I safely check?",
+      "relevant_document_ids": [
+        "demo-technical-troubleshooting"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "Which details should I collect if the app crashes?",
+      "relevant_document_ids": [
+        "demo-technical-troubleshooting"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What information is useful when a page is slow?",
+      "relevant_document_ids": [
+        "demo-technical-troubleshooting"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What should support collect for an HTTP 500 before diagnosing it?",
+      "relevant_document_ids": [
+        "demo-technical-troubleshooting"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "The app crashes. Is restarting it a low-risk first step?",
+      "relevant_document_ids": [
+        "demo-technical-troubleshooting"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How many points does the example program award for each CNY 1 spent?",
+      "relevant_document_ids": [
+        "demo-membership-points"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What is the example redemption value for one hundred points?",
+      "relevant_document_ids": [
+        "demo-membership-points"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How much cumulative spend is shown for the example Silver tier?",
+      "relevant_document_ids": [
+        "demo-membership-points"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What example discount is associated with Gold membership?",
+      "relevant_document_ids": [
+        "demo-membership-points"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "When do points expire under the sample rules?",
+      "relevant_document_ids": [
+        "demo-membership-points"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How long does standard delivery usually take in the example guide?",
+      "relevant_document_ids": [
+        "demo-delivery-service"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How much does express delivery cost, and what is its usual delivery time?",
+      "relevant_document_ids": [
+        "demo-delivery-service"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What is the example shipping fee for orders of at least CNY 99?",
+      "relevant_document_ids": [
+        "demo-delivery-service"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "How much extra time may a remote area require?",
+      "relevant_document_ids": [
+        "demo-delivery-service"
+      ],
+      "top_k": 5
+    },
+    {
+      "query": "What are the example local delivery fee and arrival window?",
+      "relevant_document_ids": [
+        "demo-delivery-service"
+      ],
+      "top_k": 5
+    }
+  ]
+}
